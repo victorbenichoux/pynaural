@@ -1,0 +1,63 @@
+from faddeeva import *
+ImportError: No module named faddeeva
+
+* Definir __all__ dans chaque module
+* Docstrings
+* geometry: pourquoi ne pas utiliser des array? (je crois qu'il y a un moyen
+  de donner des noms (x,y,z) aux coordonnées, j'ai oublié mais Dan doit savoir)
+  Record array ou Structured array
+  
+june 5th:
+     Major issue: check support for multiple sources, especially now that there is equalizationn
+     
+     
+june 8th:
+     Jose pena's lab
+     
+     Some things I should do:
+     Since one wants to consider omnidirectional sources, and I'm doing the saptial sampling from the receiver, then get the distribution of the rays arriving to the source and wigh them accordingly (this is brilliant btw)
+     
+     Try and see more for this barn owl stuff, i.e do a litterature review (start on romain's zotero). do a first model. play around with it
+     
+     add support for cylindrical shapes for hrtf modeling. maybe with a varying diameter. could it be possible de incrementally add something like the barnowl's ear canal?
+
+june 14th:
+     - re-do the models class, possibly overloading * and + ... 
+     - check with the paper to get the right values of abs, etc...
+     - do some very simple step-like freq dependant filters.
+     
+     - add diffusion coeficient.
+          
+     
+
+     	   
+march 24
+
+* models: vitesse du son qui varie avec la frequence, avec la temperature
+* multiprocessing computeIR 
+* calculs en temps (modeles simples)?
+  -> permettre de fournir des modeles en temps ou en frequence.
+     + calcul en temps plus rapide pour delay + gain (surtout memoire)
+     - relou a faire
+ PLUTOT : Sparse Matrices
+ 	  + lil?
+	  constraint:	  fast access to dense columns
+
+*** TOP PRIORITY
+    prepare experiment for distance perception:
+    	    - generate stimuli script
+	      3 models:	       
+	      	- mikki
+		- pure attenuation + delay
+		- maybe just a slight difference in delay
+		  ++ look at the distribution of delay differences
+			 
+** medium priority
+   more documentation
+   			
+* lower priority
+  biquad filter	  
+  bandpass filters to use the sengenspiel audio values for relfections
+  - Deconvolve HRTFs for BarnOwl (up: complicated!, not so much)
+  - implement visual raytracing (it's so useless, i HAVE to do it) => yes
+

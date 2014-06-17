@@ -1,0 +1,31 @@
+Contents of pynaural.signal
+
+impulseresponse
+	classes for simple IR/TF
+	
+misc.py
+	noise generating classes?
+	
+fitting.py
+	- circular linear regression
+
+smoothing.py
+	octaveband_smoothing
+
+interpolation.py 
+	- should I include this?
+
+binauralcues.py
+ 	computation of ITD
+		- xcorr
+		- phase simple
+		- onset ITD
+		- phase fit (ITDg, ITDp, IDI)
+		
+	computation of ILD
+
+spherical head model
+	
+measurement.py
+		
+	swept sine sound generation and deconvolution
