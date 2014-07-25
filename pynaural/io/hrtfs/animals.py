@@ -1,7 +1,6 @@
 '''
 This script contains functions to load animals' HRTFs.
 '''
-from spatializer import *
 import pickle, re
 import numpy as np
 import os, inspect

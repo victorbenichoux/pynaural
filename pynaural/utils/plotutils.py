@@ -1,7 +1,7 @@
 from matplotlib.pyplot import *
 import numpy as np
 from scipy import stats
-import spatializer
+#import spatializer
 from scipy.interpolate import interp1d
 print 'spat plotutils'
 
