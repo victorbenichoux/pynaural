@@ -12,6 +12,7 @@ import time
 from scikits.audiolab import Sndfile
 import os
 import numpy as np
+import array as pyarray
 
 def load_nist(fn):
     '''
@@ -44,6 +45,54 @@ def load_wav24(fn):
     data /= 2**23
     return Sound(data, framerate * Hz)
 
+def save(data, filename, samplerate = 44100., normalise=False, samplewidth=2):
+    '''
+    Save a sound as a WAV.
+
+    If the normalise keyword is set to True, the amplitude of the sound will be
+    normalised to 1. The samplewidth keyword can be 1 or 2 to save the data as
+    8 or 16 bit samples.
+    '''
+    nchannels = data.shape[0]
+    ext = filename.split('.')[-1].lower()
+    if ext=='wav':
+        import wave as sndmodule
+    elif ext=='aiff' or ext=='aifc':
+        import aifc as sndmodule
+        raise NotImplementedError('Can only save as wav soundfiles')
+    else:
+        raise NotImplementedError('Can only save as wav soundfiles')
+
+    if samplewidth != 1 and samplewidth != 2:
+        raise ValueError('Sample width must be 1 or 2 bytes.')
+
+    scale = {2:2 ** 15, 1:2 ** 7-1}[samplewidth]
+    if ext=='wav':
+        meanval = {2:0, 1:2**7}[samplewidth]
+        dtype = {2:int16, 1:uint8}[samplewidth]
+        typecode = {2:'h', 1:'B'}[samplewidth]
+    else:
+        meanval = {2:0, 1:2**7}[samplewidth]
+        dtype = {2:int16, 1:uint8}[samplewidth]
+        typecode = {2:'h', 1:'B'}[samplewidth]
+    w = sndmodule.open(filename, 'wb')
+    w.setnchannels(nchannels)
+    w.setsampwidth(samplewidth)
+    w.setframerate(int(samplerate))
+    x = np.array(data,copy=True)
+    am=np.amax(x)
+    z = np.zeros(x.shape[0]*nchannels, dtype=x.dtype)
+    x.shape=(x.shape[0],nchannels)
+    for i in range(nchannels):
+        if normalise:
+            x[:,i] /= am
+        x[:,i] = (x[:,i]) * scale + meanval
+        z[i::nchannels] = x[::1,i]
+    data = array(z, dtype=dtype)
+    data = pyarray.array(typecode, data)
+    w.writeframes(data.tostring())
+    w.close()
+
 ############### ZOOM Marker data ######################
 # stuff to load marker position recorded using a ZOOM handheld recorder (and usually found in wav24 format
 def readnumber(f):
@@ -54,7 +103,7 @@ def readnumber(f):
 
 def get_labels(fn):
     f = open(fn,"r")
-    if f.read(4) != "RIFF":
+    if f.read(4) != "RIFF":re
         print "Unknown file format (not RIFF)"
         return None
     f.read(4)
