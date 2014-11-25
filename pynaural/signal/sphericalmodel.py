@@ -1,20 +1,14 @@
-from scipy.special import *
-from numpy.fft import *
-from ..geometry import *
-from ..acoustics import c # speed of sound
-from .misc import zeropad, dBconv, fullrangefreq #
-from .smoothing import apply_windowing
-from .impulseresponse import ImpulseResponse, TransferFunction
-from brian.stdunits import *
-import numpy as np
+
+from pynaural.raytracer.geometry import *
+from pynaural.raytracer.acoustics import c # speed of sound
+from pynaural.signal.impulseresponse import ImpulseResponse, TransferFunction
+
 from brian import *
+from numpy.fft import fft, ifft
 
 MAX_ITER = 1e7
 
-class HRTFModel(object):
-    pass
-
-class SphericalHead(HRTFModel):
+class SphericalHead(object):
     '''
     * Spherical Head Model * 
     
@@ -161,8 +155,7 @@ class SphericalHead(HRTFModel):
     def _get_single_tf(self, az, el, distance = 2*meter, 
                        ear = 'left', 
                        pre_delay = None,
-                       nfft = None, samplerate = None,
-                       method = 'old', order = 75, threshold = 1e-15):
+                       nfft = None, samplerate = None, threshold = 1e-15):
         ## This is where the computation is actually carried out
         # KWDARG parsing
         if nfft is None:
@@ -232,8 +225,8 @@ class SphericalHead(HRTFModel):
         H[testf>0] = conj(H[testf>0])
         
         return TransferFunction(H, 
-                                samplerate = self.samplerate,  
-                                coordinates = (az, el))
+                                samplerate=self.samplerate,
+                                coordinates=(az, el))
     
     def _cos_incidence(self, az, el, ear = 'left'):
         '''
@@ -270,154 +263,3 @@ class SphericalHead(HRTFModel):
         '''
         t = linspace(0, 1, self.nfft) / self.samplerate
         return 2 * np.pi * t * c / self.a
-
-
-############################ DEPRECATED ###################################
-# def _get_single_tf(self, az, el, distance = np.inf, 
-#                        ear = 'left', 
-#                        pre_delay = None,
-#                        nfft = None, samplerate = None,
-#                        method = 'old', order = 75, threshold = 1e-15):
-#         ## This is where the computation is actually carried out
-
-#         # KWDARG parsing
-#         if nfft is None:
-#             nfft = self.nfft
-
-#         if samplerate is None:
-#             samplerate = self.samplerate
-        
-#         ## main parameters of the model
-#         # cosine of incidence angle
-#         costheta = self._cos_incidence(az, el, ear = ear)
-#         # normalized distance
-#         rho = float(distance) / self.a
-#         # frequencies
-#         f = fftfreq(nfft)*self.samplerate
-        
-#         f[f<0] = -f[f<0]
-        
-#         # normalized frequencies
-#         mu = (f * 2 * pi * self.a)/c
-
-#         if distance == np.inf:
-#             ## aproximation for infinite distances (at least d>>a)
-#             tmp_Psi = np.zeros((nfft, order), dtype = complex)
-        
-#             for i in range(nfft):
-#                 jn_prime = sph_jn(order-1, mu[i])[1]
-#                 yn_prime = sph_yn(order-1, mu[i])[1]
-#                 ratio = 1/(jn_prime+1j*yn_prime)
-#                 tmp_Psi[i, :] = (2*arange(order)+1)*(-1j)**(arange(order)-1)*ratio
-        
-#             Pm_costheta = lpn(order-1, costheta)[0]
-#             tmp_Psi *= np.tile(Pm_costheta.reshape((1, order)), (nfft, 1))
-            
-#             Psi_prime = np.sum(tmp_Psi, axis = 1)
-            
-#             H = (1 / mu**2) * Psi_prime 
-#             H[0] = H[1]
-#         else:
-#             # otherwise, two different methods may be used
-#             if method == 'old':
-#                 # This here is the *dummy* implementation of the model using scipy's spherical functions
-#                 # its a bit more compact, and because it's vectorized it's more complicated to understand
-#                 # An important point is that the sph_jn (etc) functions in scipy return all the values of the function
-#                 # up to a certain order. In the end it means this code
-#                 # is vectorized in ``order`` but not in frequency
-#                 tmp_Psi = np.zeros((nfft, order), dtype = complex)
-
-#                 for i in range(nfft):
-#                     jn = sph_jn(order-1, mu[i]*rho)[0]
-#                     jn_prime = sph_jn(order-1, mu[i])[1]
-#                     yn = sph_yn(order-1, mu[i]*rho)[0]
-#                     yn_prime = sph_yn(order-1, mu[i])[1]
-#                     ratio = (jn+1j*yn)/(jn_prime+1j*yn_prime)
-#                     tmp_Psi[i, :] = (2*arange(order)+1)*ratio
-        
-#                 Pm_costheta = lpn(order-1, costheta)[0]
-#                 tmp_Psi *= np.tile(Pm_costheta.reshape((1, order)), (nfft, 1))#/2
-                
-#                 Psi = np.sum(tmp_Psi, axis = 1)
-                
-#                 H = (-rho / mu) * np.exp(-1j * mu * rho ) * Psi #/ nfft
-#                 H[0] = H[1]
-                
-#             elif method == 'new': 
-#                 # This here implements the method for approximating H given in Duda Mertens 1998
-#                 # - It basically does the same thing, except that the number of terms  in the 
-#                 # series evaluation may depend on frequency
-#                 # - Also, it uses a different stop condition (see threshold)
-#                 # - Note that the implemetnation is straightforward, I have just renamed x by costheta
-#                 zr = 1./(1j*mu*rho)
-#                 za = 1./(1j*mu)
-
-#                 Qr2 = zr
-#                 Qr1 = zr*(1. - zr)
-#                 Qa2 = za
-#                 Qa1 = za*(1. - za)
-                
-#                 P2 = 1.
-#                 P1 = costheta
-                
-#                 _sum = 0.
-                
-#                 term = zr/(za*(za - 1.))
-#                 _sum = _sum + term
-                
-#                 term = (3*costheta*zr*(zr-1))/(za*(2*za**2-2*za+1))
-                
-#                 _sum = _sum + term
-                
-#                 newratio = abs(term)/abs(_sum)
-#                 oldratio = ones_like(newratio)
-#                 m = 2
-                
-#                 condition = ones(f.shape, dtype = bool)
-                
-#                 while condition.any():
-#                     if m > MAX_ITER:
-#                         print 'Maximum iterations reached'
-#                         break
-                    
-#                     Qr = -(2*m - 1)*zr*Qr1 + Qr2
-#                     Qa = -(2*m - 1)*za*Qa1 + Qa2
-#                     P = ((2*m - 1)*costheta*P1 - (m-1)*P2)/m
-#                     term = ((2*m + 1)*P*Qr)/((m+1)*za*Qa-Qa1)
-                    
-#                     _sum[condition] = _sum[condition] + term[condition]
-                    
-#                     m = m+1
-#                     Qr2 = Qr1
-#                     Qr1 = Qr
-#                     Qa2 = Qa1
-#                     Qa1 = Qa
-#                     P2 = P1
-#                     P1 = P
-                    
-#                     oldratio = newratio
-#                     newratio = abs(term)/abs(_sum)
-                    
-#                     condition = (oldratio > threshold) + (newratio > threshold)
-                    
-#                 H = (float(rho)*exp(-1j*mu)*_sum )/ (1j*mu)
-
-#         # remove nans? dunno
-# #        H[np.isnan(H)] = 0
-                
-#         H[0] = 0
-#         testf = fftfreq(nfft)
-#         H[testf>0] = conj(H[testf>0])
-        
-        
-
-#         # And in any event, if pre_delay is set then delay the TF
-#         if pre_delay is None:
-#             pre_delay = 0
-#         else:
-#             pre_delay = pre_delay
-#         H *= exp(-1j*pre_delay*2*pi*f/self.samplerate)
-#         # And return the TransferFunction object
-#         return TransferFunction(H, 
-#                                 samplerate = self.samplerate,  
-#                                 coordinates = (az, el))

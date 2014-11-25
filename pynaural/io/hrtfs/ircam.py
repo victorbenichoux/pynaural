@@ -1,10 +1,13 @@
-from spatializer.dsp import ImpulseResponse
-from spatializer.geometry.base import cartesian2spherical, rad2deg
 from brian.stdunits import kHz
 from scipy.io import loadmat
 import numpy as np
-import os
+from glob import glob
+import re, os
 
+from pynaural.signal.impulseresponse import ImpulseResponse
+from pynaural.utils.spatprefs import get_pref
+
+__all__ = ['ircamHRIR', 'az_spat2ircam', 'az_ircam2spat']
 
 def ircamHRIR(subject, coordsfilter = None, path = None, compensated = False):
         '''
@@ -20,7 +23,7 @@ def ircamHRIR(subject, coordsfilter = None, path = None, compensated = False):
         ``path'' : specify this and the IRC_xxxx file will be looked for in this folder, otherwise uses the IRCAMpath default preference.
         '''
         if path == None:
-            path = prefs.get_pref('IRCAMpath', default = '')
+            path = get_pref('IRCAMpath', default = '')
 
         if not isinstance(path, (list, tuple)):
             path = [path]
@@ -81,7 +84,7 @@ def ircamHRIR(subject, coordsfilter = None, path = None, compensated = False):
         l = l['content_m'][0][0]
         r = r['content_m'][0][0]
 
-        data = vstack((reshape(l, (1,) + l.shape), reshape(r, (1,) + r.shape)))
+        data = np.vstack((np.reshape(l, (1,) + l.shape), np.reshape(r, (1,) + r.shape)))
         
         # not sure I need to do that:
         dtype_coords = [('azim','f8'), ('elev','f8')]
@@ -104,3 +107,24 @@ def ircamHRIR(subject, coordsfilter = None, path = None, compensated = False):
             hrir = hrir.forcoordinates(coordsfilter)
         
         return hrir
+
+def az_spat2ircam(az):
+    '''
+    Converts azimuth positions between spatializer and ircam systems
+    '''
+    if az < -180 or az > 180:
+        raise ValueError('Wrong azimuth for conversion spatializer->IRCAM')
+    if az == -180:
+        az = 180
+    return np.mod(-az,360)
+
+def az_ircam2spat(az):
+    '''
+    Converts azimuth positions between ircam and spatializer systems
+    '''
+    if az < 0 or az > 360: 
+        raise ValueError('Wrong azimuth for conversion IRCAM->spatializer')
+    if az <= 180:
+        return az
+    else:
+        return -(360-az)

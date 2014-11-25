@@ -1,11 +1,10 @@
 from pynaural.raytracer.geometry import *
+from pynaural.raytracer.geometry.base import FloatTriplet
+from pynaural.raytracer.geometry.surfaces import Sphere
 from pynaural.utils.debugtools import log_debug
-from pynaural.raytracer  import receivers
-from pynaural.raytracer.scenes  import *
+from pynaural.raytracer.receivers import Receiver, OrientedReceiver
 
 import numpy as np
-import scipy as sp
-
 
 __all__=['BaseSource',
          'Source', 'EqualizedSource',
@@ -56,17 +55,17 @@ class BaseSource(object):
         return 'Source:\n '+str(self.position)+'\n'
     
     def getRelativeCoords(self, receiver):
-        if isinstance(receiver, receivers.Receiver):
+        if isinstance(receiver, Receiver):
             d = Vector(self.position.array() - receiver.position.array())
             return d
         else:
             raise TypeError
         
     def getRelativeSphericalCoords(self, receiver, unit = 'deg'):
-        if isinstance(receiver, receivers.Receiver):
+        if isinstance(receiver, Receiver):
             direction = Vector(self.position.array() - receiver.position.array())
             (d, az, el) = direction.toSphericalCoords(unit = unit)
-            if isinstance(receiver, receivers.OrientedReceiver):
+            if isinstance(receiver, OrientedReceiver):
                 (_, azref, elref) = receiver.orientation.toSphericalCoords(unit = unit)
                 az -= azref
                 el -= elref
@@ -273,7 +272,7 @@ def ensure_iterable(obj):
 def voronoi_partition(data, N, probe = None, distance = 'orthodromic'):
     '''
     Uses a Monte Carlo method to estimate a Voronoi diagram on a
-    sphere.
+    sphere. Distance criterion is orthodromic
 
 
     ** Arguments **
@@ -285,9 +284,6 @@ def voronoi_partition(data, N, probe = None, distance = 'orthodromic'):
     the montecarlo method)
     
     ** Keyword arguments **
-    
-    `` distance = 'orthodromic'`` Which distance measure to
-    use. Supports 'orthodromic', 'euclidean', 'angular'.
     
     `` probe = None`` One can supply manually the probe positions
     (discrete positions on the sphere) that the algorithm uses to
@@ -301,12 +297,7 @@ def voronoi_partition(data, N, probe = None, distance = 'orthodromic'):
         
     dists = np.zeros((data.shape[1], N))
     for i in range(data.shape[1]):
-        if distance == 'euclidean':
-            dists[i,:] = euclidean_distance(data, beam.directions[:,i])
-        elif distance == 'orthodromic':
-            dists[i,:] = orthodromic_distance(probe, data[:,i])
-        elif distance == 'angular':
-            dists[i,:] = angular_distance(data, beam.directions[:,i])
+        dists[i,:] = orthodromic_distance(probe, data[:,i])
     closest = np.argmin(dists, axis = 0)
     
     # fetching final values

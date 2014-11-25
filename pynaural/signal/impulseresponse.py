@@ -5,16 +5,19 @@ from scipy.signal import *
 from scipy.io import loadmat
 import numpy as np
 
-from pynaural.raytracer.geometry.base import *
-from pynaural.signal.misc import *
-from pynaural.signal.smoothing import *
-
 try:
     from brian import *
     from brian.hears import *
     has_brian = True
 except:
     has_brian = False
+
+from pynaural.raytracer.geometry.base import *
+from pynaural.signal.misc import *
+from pynaural.signal.smoothing import *
+from pynaural.utils.spatprefs import get_pref
+
+
 
 __all__ = ['ImpulseResponse',
            'onesIR', 'zerosIR', 'delayIR', 'binauralIR',
@@ -68,7 +71,8 @@ class ImpulseResponse(np.ndarray):
             return ImpulseResponse(data_ift, **kwdargs)
         if isinstance(data, np.ndarray):
             if samplerate is None:
-                samplerate = prefs.get_pref('DEFAULT_SAMPLERATE', default = 44100.)*Hz
+                samplerate = 44100.*Hz
+                #samplerate = prefs.get_pref('DEFAULT_SAMPLERATE', default = 44100.)*Hz
             x = array(data, dtype = float)
         else:
             print cls, data
@@ -255,6 +259,7 @@ class ImpulseResponse(np.ndarray):
         hrir.forcoordinates(i) to iterate over positions
         '''
         # argument parsing
+        print args
         if len(args) == 1 and type(args[0]) == int:
             # indexing is just the i'th IR
             i = args[0]
@@ -269,8 +274,9 @@ class ImpulseResponse(np.ndarray):
                 kwdargs['binaural'] = True
             else:
                 data = self[:,i]
-
-            return ImpulseResponse(data, **kwdargs)
+            out = ImpulseResponse(data, **kwdargs)
+            print "out", out
+            return out
 
         if len(args) == 1 and callable(args[0]):
             fun = args[0]
@@ -279,7 +285,7 @@ class ImpulseResponse(np.ndarray):
             for i, (az, el) in enumerate(self.coordinates[:self.shape[1]/2]):
                 if fun(az, el):
                     idx.append(i)
-            if len(idx)>0:
+            if len(idx) > 0:
                 idx = np.array(idx)
                 data = np.hstack((self[:, idx], self[:, idx + self.shape[1] /2]))
 
@@ -814,7 +820,7 @@ class TransferFunction(np.ndarray):
             return TransferFunction(data_ft, **kwdargs)
         if isinstance(data, np.ndarray):
             if samplerate is None:
-                samplerate = prefs.get_pref('DEFAULT_SAMPLERATE', default = 44100.)*Hz
+                samplerate = get_pref('DEFAULT_SAMPLERATE', default = 44100.)*Hz
             x = array(data, dtype = complex)
         else:
             print cls, data

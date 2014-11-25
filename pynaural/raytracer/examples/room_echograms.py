@@ -4,13 +4,13 @@ from matplotlib.pyplot import *
 A simple example in which basic echograms are computed (i.e. propagation time to source and number of reflections per ray) for rooms of different sizes, with same proportions.
 """
 
-
-Nrays = 1e7
+Nrays = 1e5
 alpha = 0.9
 
 depths = []
 times = []
 factors = np.linspace(1, 2, 10)
+
 for kf, fact in enumerate(factors):
     scene = RoomScene(fact*4., fact*6., fact*2., stopcondition = 10)
     source = Source(1.5*FRONT + UP)

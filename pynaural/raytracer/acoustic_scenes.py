@@ -1,5 +1,8 @@
+from pynaural.raytracer.scenes import GeometricScene, GroundScene
 
-class NaturalGroundScene(SimpleScene):
+__all__ = ['NaturalGroundScene', 'AcousticScene']
+
+class NaturalGroundScene(GroundScene):
     '''
     A specialized SimpleScene that handles the Miki model (because it
     doesn't fit in usual model architecture). 
@@ -18,15 +21,15 @@ class NaturalGroundScene(SimpleScene):
         
     '''
     def __init__(self, sigma = 2e6, model = None, with_delays = True):
-        if (model is None):
+        if model is None:
             self.sigma = sigma
             model = NaturalGroundModel(sigma)
         else:
             self.sigma = model.sigma
         
         self.with_delays = with_delays
-            
-        super(NaturalGroundScene, self).__init__(model = model)
+        self.model = model
+        super(NaturalGroundScene, self).__init__()
 
     def _computeTFs(self, beam, nfft, **kwdargs):
         if 'samplerate' in kwdargs:

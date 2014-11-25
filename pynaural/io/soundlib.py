@@ -1,6 +1,5 @@
 import numpy as np
-import time
-import struct
+
 try:
     import pyaudio
     has_pyaudio = True
@@ -108,9 +107,9 @@ def loadwave(filename):
     Sound file can be either a .wav or a .aif file.
     '''
     ext = filename.split('.')[-1].lower()
-    if ext=='wav':
+    if ext == 'wav':
         import wave as sndmodule
-    elif ext=='aif' or ext=='aiff':
+    elif ext == 'aif' or ext == 'aiff':
         import aifc as sndmodule
     else:
         raise NotImplementedError('Can only load aif or wav soundfiles')

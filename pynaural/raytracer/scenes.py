@@ -1,10 +1,7 @@
-import gc
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
 
 from pynaural.utils.debugtools import log_debug
-from pynaural.utils.spatprefs import *
 from pynaural.raytracer.geometry.base import FloatTriplet, ORIGIN, Point, Vector, FRONT, BACK, LEFT, RIGHT, UP, DOWN, ORIGIN
 from pynaural.raytracer.geometry.surfaces import Plane, Surface, Sphere
 from pynaural.raytracer.geometry.rays import Beam
@@ -13,7 +10,7 @@ from pynaural.raytracer.receivers import Receiver
 from pynaural.raytracer.acoustics import c
 
 
-DEFAULT_PRECISION = 1e-5 #precision, to prevent self intersection, here 1cm
+DEFAULT_PRECISION = 1e-2 #precision, to prevent self intersection, here 1cm
 DEFAULT_STOPCONDITION = 30 # default number of reflections
 DEFAULT_NRAYS = 1e6 # default number of rays
 
@@ -417,8 +414,9 @@ class GeometricScene(object):
 
         if isinstance(position, FloatTriplet):
             position = position.array().reshape((3,1))
+
         elif isinstance(position, np.ndarray) & position.ndim == 1:
-            position = position.reshape((3,1))
+            position = position.reshape((3, 1))
         
         for source in self.sources:
             cur_nrays = float(nrays)/self.nsources
@@ -449,7 +447,7 @@ class GeometricScene(object):
         '''
         if isinstance(obj, Receiver):
             nrays = kwdargs.get('nrays', self.nrays)
-            beam = self.get_beam(obj, nrays = nrays)
+            beam = self.get_beam(obj.position, nrays = nrays)
         elif isinstance(obj, Beam):
             beam = obj
         else:
@@ -676,7 +674,7 @@ class VoidScene(GeometricScene):
     In this setting the environment impulse response will aways be dirac-like.
     '''
     def __init__(self):
-        super(VoidScene, self).__init__(stopcondition = 1, model = DummyModel())
+        super(VoidScene, self).__init__(stopcondition = 1, model = None)
         self.set_stopcondition(1)
 
     def get_beam(self, pos, **kwdargs):
@@ -734,6 +732,7 @@ class GroundScene(GeometricScene):
     def get_beam(self, position, nrays = DEFAULT_NRAYS):
         if isinstance(position, FloatTriplet):
             position = position.array().reshape((3,1))
+
         elif isinstance(position, np.ndarray) & position.ndim == 1:
             position = position.reshape((3,1))
 
@@ -741,7 +740,7 @@ class GroundScene(GeometricScene):
         res = Beam(0)
         for k in range(self.nsources):
             beam = Beam(2)
-            beam.setTarget(self.sources[k])
+            beam.set_target(self.sources[k])
             
 
             

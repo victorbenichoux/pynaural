@@ -12,6 +12,7 @@ IRCAMpath = ['/Users/victorbenichoux/Workspace/Data/HRTF/',
              '/Users/victorbenichoux/Workspace/Data/IRCAM_Mesures/HRTFMeas/', 
              '/Users/victorbenichoux/Desktop/sounds/IRCAM_Mesures/HRTFMeas/', 
              '/home/victor/Work/Data/HRTF/IRCAM New/',
+             '/home/victor/Data/HRTF/IRCAM New/',
              '/media/Data/Data/data/sounds/IRCAM_Mesures/HRTFMeas/',
              ]
 

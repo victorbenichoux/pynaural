@@ -1,0 +1,237 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Receivers &mdash; Spatializer 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Spatializer 0.1 documentation" href="../index.html" />
+    <link rel="up" title="User Guide" href="index.html" />
+    <link rel="prev" title="Geometry" href="geometry.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geometry.html" title="Geometry"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Spatializer 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">User Guide</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="receivers">
+<h1>Receivers<a class="headerlink" href="#receivers" title="Permalink to this headline">¶</a></h1>
+<p>This documentation deals with the basic acoustical objects in the spatializer.</p>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<span class="target" id="module-spatializer.receivers"></span><dl class="class">
+<dt id="spatializer.receivers.Receiver">
+<em class="property">class </em><tt class="descclassname">spatializer.receivers.</tt><tt class="descname">Receiver</tt><big>(</big><em>loc</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#Receiver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.Receiver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parent class for receiver objects</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spatializer.receivers.HeadReceiver">
+<em class="property">class </em><tt class="descclassname">spatializer.receivers.</tt><tt class="descname">HeadReceiver</tt><big>(</big><em>height</em>, <em>iad</em>, <em>orientation=Vector (0.0</em>, <em>1.0</em>, <em>0.0)</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#HeadReceiver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.HeadReceiver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialized with the height of the head center and interaural distance.
+Is a simple two-points receiver that represents an empty head.</p>
+<p>** Initialization **</p>
+<dl class="method">
+<dt id="spatializer.receivers.HeadReceiver.getSphericalBeam">
+<tt class="descname">getSphericalBeam</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#HeadReceiver.getSphericalBeam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.HeadReceiver.getSphericalBeam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a spherical beam with 2*n rays, the first half coming from the left ear and the scond from the right ear.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spatializer.receivers.OrientedReceiver">
+<em class="property">class </em><tt class="descclassname">spatializer.receivers.</tt><tt class="descname">OrientedReceiver</tt><big>(</big><em>position</em>, <em>orientation</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#OrientedReceiver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.OrientedReceiver" title="Permalink to this definition">¶</a></dt>
+<dd><p>OrientedReceiver is just a regular receiver but oriented. This provides the reference for the azimuth and elevation in the HRTF computations</p>
+<dl class="method">
+<dt id="spatializer.receivers.OrientedReceiver.placeSource">
+<tt class="descname">placeSource</tt><big>(</big><em>distance</em>, <em>rotation</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#OrientedReceiver.placeSource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.OrientedReceiver.placeSource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Yields a source at a certain distance, az and el relative to the oriented receiver object.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spatializer.receivers.HRTFReceiver">
+<em class="property">class </em><tt class="descclassname">spatializer.receivers.</tt><tt class="descname">HRTFReceiver</tt><big>(</big><em>position</em>, <em>orientation=Vector (0.0</em>, <em>1.0</em>, <em>0.0)</em>, <em>is_distancedependent=False</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#HRTFReceiver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.HRTFReceiver" title="Permalink to this definition">¶</a></dt>
+<dd><p>A single-point receiver that uses HRTF to finally filter IRs. The
+position is the head center.</p>
+<p>** Initialization **</p>
+<p><tt class="docutils literal"><span class="pre">position</span></tt> can be a Quantity or numeric object. If so the
+Receiver is positioned at position*UP. Alternatively it can be
+just a Vector or Point giving the real position.</p>
+<p>`` orientation = FRONT `` Orientation of the Receiver object.</p>
+<p>** Methods **</p>
+<dl class="method">
+<dt id="spatializer.receivers.HRTFReceiver.get_beam">
+<tt class="descname">get_beam</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#HRTFReceiver.get_beam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.HRTFReceiver.get_beam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a beam centered at the position with directions
+through all available coordinates.
+TODO</p>
+</dd></dl>
+
+<p>** Advanced **</p>
+<p>An HRTFReceiver has to implement the <a href="#id1"><span class="problematic" id="id2">``</span></a>get_hrir&#8217;&#8217; method.
+<a href="#id3"><span class="problematic" id="id4">``</span></a>get_hrir(az, el [,distance])&#8217;&#8217; returns the hrir pair for the given direction.</p>
+<p>Note that if the <a href="#id5"><span class="problematic" id="id6">``</span></a>distance&#8217;&#8217; argument is supported by <a href="#id7"><span class="problematic" id="id8">``</span></a>get_hrir&#8217;&#8217; then the <a href="#id9"><span class="problematic" id="id10">``</span></a>is_distancedependent&#8217;&#8217; property must be set to True.</p>
+<dl class="method">
+<dt id="spatializer.receivers.HRTFReceiver.computeHRIRs">
+<tt class="descname">computeHRIRs</tt><big>(</big><em>*args</em>, <em>**kwdargs</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#HRTFReceiver.computeHRIRs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.HRTFReceiver.computeHRIRs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to fetch HRIRs relative to a result from an AcousticScene,</p>
+<p>can be used either with a scene + beam (result of rendering)
+or simply with a list of coordinates of the form (az,el) where
+az and el are in my convention, but for that rather use get_hrir</p>
+<p>also the method kwargs can switch between interpolation
+(bilinear) or closest behavior,</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spatializer.receivers.HRTFReceiver.computeHRTF">
+<tt class="descname">computeHRTF</tt><big>(</big><em>*args</em>, <em>**kwdargs</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#HRTFReceiver.computeHRTF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.HRTFReceiver.computeHRTF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Should return an array containing HRTFs for each beam direction.
+Should be overriden by more specialized classes</p>
+<p>Note: this is the &#8220;vectorized&#8221; version of get_hrir and is not used for the moment
+TODO</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spatializer.receivers.HRTFReceiver.computeIRs">
+<tt class="descname">computeIRs</tt><big>(</big><em>*args</em>, <em>**kwdargs</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#HRTFReceiver.computeIRs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.HRTFReceiver.computeIRs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the scene response convolved by the hrtfs.
+depends on the form of the HRTFs.</p>
+<p>Computes the IRs from the scene given as a first argument, and convolves it correctly with the Receiver.</p>
+<p>Sample usage:
+receiver.computeIRs(scene,</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">get_beam</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#HRTFReceiver.get_beam"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a beam centered at the position with directions
+through all available coordinates.
+TODO</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spatializer.receivers.IRCAMSubjectReceiver">
+<em class="property">class </em><tt class="descclassname">spatializer.receivers.</tt><tt class="descname">IRCAMSubjectReceiver</tt><big>(</big><em>height</em>, <em>orientation=Vector (0.0</em>, <em>1.0</em>, <em>0.0)</em>, <em>subject=None</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#IRCAMSubjectReceiver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.IRCAMSubjectReceiver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Is used to place a know subject of the IRCAM database in a scene.
+Initialized with the subject number, height, inter aural difference and orientation.
+You must instanciate the IRCAMpath preference variable for it to work.</p>
+<dl class="method">
+<dt id="spatializer.receivers.IRCAMSubjectReceiver.get_normalization_factors">
+<tt class="descname">get_normalization_factors</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#IRCAMSubjectReceiver.get_normalization_factors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.IRCAMSubjectReceiver.get_normalization_factors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the normalisation factors alphaleft alpharight so that all the filters on the left (resp. right) have a gain equals to 1.</p>
+<p>The gain of a filter being defined as the sqrt of the sum of the square of the amplitudes of the tf.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spatializer.receivers.IRCAMInterpolatingReceiver">
+<em class="property">class </em><tt class="descclassname">spatializer.receivers.</tt><tt class="descname">IRCAMInterpolatingReceiver</tt><big>(</big><em>height</em>, <em>orientation=Vector (0.0</em>, <em>1.0</em>, <em>0.0)</em>, <em>subject=None</em>, <em>compensated=False</em><big>)</big><a class="reference internal" href="../_modules/spatializer/receivers.html#IRCAMInterpolatingReceiver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spatializer.receivers.IRCAMInterpolatingReceiver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements a spatializer counter part of the hrtfsets in Brian.
+Is used to place a know subject of the IRCAM database in a scene.
+Initialized with the subject number, height, inter aural difference and orientation.
+You must instantiate the IRCAMpath preference variable for it to work.</p>
+<p>has an attribute hrtfset from which it gets the hrirs through hrtfset.get_hrir(az, el, distance = ...)</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="geometry.html"
+                        title="previous chapter">Geometry</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/user/receivers.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geometry.html" title="Geometry"
+             >previous</a> |</li>
+        <li><a href="../index.html">Spatializer 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >User Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Victor Benichoux.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

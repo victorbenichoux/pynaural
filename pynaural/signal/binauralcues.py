@@ -217,6 +217,17 @@ def ild_bare(hrir, cf, **kwdargs):
     return ilds
 
 # computes both ITD and ILD using xcorr
+def bb_itd_ild_xcorr(left, right):
+    '''
+    returns ILD in dB, ITD in samples
+    '''
+    Lf = np.fft.fft(np.hstack((left, np.zeros(len(left)))))
+    Rf = np.fft.fft(np.hstack((right[::-1], np.zeros(len(right)))))
+    C = np.fft.ifft(Lf*Rf).real
+
+    itd_idx = len(left) - np.argmax(C)
+    ild = 20*np.log10(C.max())
+    return itd_idx, ild
 
 def itd_ild_xcorr(hrir, cf, cpu = 1):
     '''

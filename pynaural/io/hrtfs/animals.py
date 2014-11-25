@@ -5,6 +5,7 @@ import pickle, re
 import numpy as np
 import os, inspect
 from brian import *
+from pynaural.signal.impulseresponse import ImpulseResponse
 _, name, _, _, _ = os.uname()
 
 BOfolder = ''
@@ -15,7 +16,8 @@ KRdata = ''
 
 # if you're using this script, don't hesitate to put your computer, just figure out the output of os.uname in a console and put another elif down there.
 if name == 'victor-desktop':
-    BOfolder = '/home/victor/Work/Data/HRTF/deconvolved Owl HRTFs/'
+#    BOfolder = '/home/victor/Work/Data/HRTF/deconvolved Owl HRTFs/'
+    BOfolder = '/media/victor/2809aec9-fbcc-4b44-b3e2-a9b796d99062/Data/HRTF/deconvolved Owl HRTFs/'
     KRdata = '/home/victor/Work/Data/HRTF/Rabbit (from Shig Kuwada)/'
     CATFOLDER = '/home/victor/Work/Data/HRTF/Synthesized cat/'
     SPHfolder = '/home/victor/workspace/hrtf_analysis/data/ircam_spherical'

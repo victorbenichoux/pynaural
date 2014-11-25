@@ -1,0 +1,6 @@
+Geometry
+========
+
+This documentation deals with the basic geometrical objects in the spatializer
+
+.. toctree::

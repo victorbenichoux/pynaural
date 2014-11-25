@@ -1,0 +1,20 @@
+User Guide
+==========
+
+This manual is intended to explain how the spatializer module works.
+
+
+** Geometry **
+.. automodule:: spatializer.geometry
+
+** Acoustical objects **
+.. automodule:: spatializer
+
+** Acoustical Scenes
+
+
+   :members:
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

@@ -1,0 +1,598 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spatializer.receivers &mdash; Spatializer 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Spatializer 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="spatializer" href="../spatializer.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Spatializer 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../spatializer.html" accesskey="U">spatializer</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spatializer.receivers</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">brian.hears</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.geometry</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.dsp</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.acoustics</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">sources</span> <span class="kn">as</span> <span class="nn">srcs</span>
+<span class="kn">import</span> <span class="nn">scenes</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="kn">as</span> <span class="nn">sp</span>
+
+<span class="kn">from</span> <span class="nn">brian.hears.hrtf</span> <span class="kn">import</span> <span class="o">*</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Receiver&#39;</span><span class="p">,</span> <span class="s">&#39;HeadReceiver&#39;</span><span class="p">,</span>
+           <span class="s">&#39;OrientedReceiver&#39;</span><span class="p">,</span>
+           <span class="s">&#39;ArrayReceiver&#39;</span><span class="p">,</span>
+           <span class="s">&#39;HRTFReceiver&#39;</span><span class="p">,</span> <span class="s">&#39;SphericalHeadReceiver&#39;</span><span class="p">,</span>
+           <span class="s">&#39;IRCAMSubjectReceiver&#39;</span><span class="p">,</span> <span class="s">&#39;IRCAMInterpolatingReceiver&#39;</span><span class="p">]</span>
+
+<span class="c">########################### Receivers ##################</span>
+
+<div class="viewcode-block" id="Receiver"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.Receiver">[docs]</a><span class="k">class</span> <span class="nc">Receiver</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Parent class for receiver objects</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loc</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="n">Point</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">loc</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="n">Vector</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">loc</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;Position wasnt point or vector, &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">loc</span><span class="p">))</span>
+    
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;Receiver:</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span>
+    
+    <span class="k">def</span> <span class="nf">getSphericalBeam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">SphericalBeam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">computeIRs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="n">scene</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">rest</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">scene</span><span class="o">.</span><span class="n">computeIRs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">rest</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">binaural</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">get_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+
+<span class="c">############# Parent classes for HRTF integration</span>
+</div>
+<div class="viewcode-block" id="OrientedReceiver"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.OrientedReceiver">[docs]</a><span class="k">class</span> <span class="nc">OrientedReceiver</span><span class="p">(</span><span class="n">Receiver</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    OrientedReceiver is just a regular receiver but oriented. This provides the reference for the azimuth and elevation in the HRTF computations</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">orientation</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">OrientedReceiver</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orientation</span><span class="p">,</span> <span class="n">Vector</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Orientation should be specified as a Vector object&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span> <span class="o">=</span> <span class="n">orientation</span><span class="o">/</span><span class="n">orientation</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+
+<div class="viewcode-block" id="OrientedReceiver.placeSource"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.OrientedReceiver.placeSource">[docs]</a>    <span class="k">def</span> <span class="nf">placeSource</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">distance</span><span class="p">,</span> <span class="n">rotation</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Yields a source at a certain distance, az and el relative to the oriented receiver object.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="n">srcs</span><span class="o">.</span><span class="n">SphericalSource</span><span class="p">(</span><span class="n">sourceposition</span><span class="p">)</span>
+
+<span class="c">########################## HRTF enabled receiver #################</span>
+</div></div>
+<div class="viewcode-block" id="HRTFReceiver"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.HRTFReceiver">[docs]</a><span class="k">class</span> <span class="nc">HRTFReceiver</span><span class="p">(</span><span class="n">OrientedReceiver</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A single-point receiver that uses HRTF to finally filter IRs. The</span>
+<span class="sd">    position is the head center.</span>
+
+<span class="sd">    ** Initialization ** </span>
+
+<span class="sd">    ``position`` can be a Quantity or numeric object. If so the</span>
+<span class="sd">    Receiver is positioned at position*UP. Alternatively it can be</span>
+<span class="sd">    just a Vector or Point giving the real position.</span>
+
+<span class="sd">    `` orientation = FRONT `` Orientation of the Receiver object. </span>
+<span class="sd">    </span>
+<span class="sd">    ** Methods ** </span>
+<span class="sd">    </span>
+<span class="sd">    .. automethod :: get_beam</span>
+<span class="sd">    </span>
+<span class="sd">    ** Advanced **</span>
+<span class="sd">    </span>
+<span class="sd">    An HRTFReceiver has to implement the ``get_hrir&#39;&#39; method.</span>
+<span class="sd">    ``get_hrir(az, el [,distance])&#39;&#39; returns the hrir pair for the given direction.</span>
+<span class="sd">    </span>
+<span class="sd">    Note that if the ``distance&#39;&#39; argument is supported by ``get_hrir&#39;&#39; then the ``is_distancedependent&#39;&#39; property must be set to True.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">orientation</span> <span class="o">=</span> <span class="n">FRONT</span><span class="p">,</span> <span class="n">is_distancedependent</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="p">(</span><span class="n">Quantity</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+            <span class="n">position</span> <span class="o">=</span> <span class="n">position</span><span class="o">*</span><span class="n">UP</span>
+        
+        <span class="n">OrientedReceiver</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">orientation</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">samplerate</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_distancedependent</span> <span class="o">=</span> <span class="n">is_distancedependent</span>
+        
+<div class="viewcode-block" id="HRTFReceiver.get_beam"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.HRTFReceiver.get_beam">[docs]</a>    <span class="k">def</span> <span class="nf">get_beam</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a beam centered at the position with directions</span>
+<span class="sd">        through all available coordinates.</span>
+<span class="sd">        TODO</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">pass</span>
+    </div>
+<div class="viewcode-block" id="HRTFReceiver.computeHRTF"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.HRTFReceiver.computeHRTF">[docs]</a>    <span class="k">def</span> <span class="nf">computeHRTF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Should return an array containing HRTFs for each beam direction.</span>
+<span class="sd">        Should be overriden by more specialized classes</span>
+<span class="sd">        </span>
+<span class="sd">        Note: this is the &quot;vectorized&quot; version of get_hrir and is not used for the moment</span>
+<span class="sd">        TODO</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">pass</span>
+</div>
+    <span class="k">def</span> <span class="nf">get_hrir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">az</span><span class="p">,</span> <span class="n">el</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">get_hrir</span><span class="p">(</span><span class="n">az</span><span class="p">,</span> <span class="n">el</span><span class="p">)</span>
+
+<div class="viewcode-block" id="HRTFReceiver.computeHRIRs"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.HRTFReceiver.computeHRIRs">[docs]</a>    <span class="k">def</span> <span class="nf">computeHRIRs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Used to fetch HRIRs relative to a result from an AcousticScene, </span>
+<span class="sd">        </span>
+<span class="sd">        can be used either with a scene + beam (result of rendering)</span>
+<span class="sd">        or simply with a list of coordinates of the form (az,el) where</span>
+<span class="sd">        az and el are in my convention, but for that rather use get_hrir</span>
+<span class="sd">        </span>
+<span class="sd">        also the method kwargs can switch between interpolation</span>
+<span class="sd">        (bilinear) or closest behavior, </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Beam</span><span class="p">):</span>
+            <span class="n">beam</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">beam</span> <span class="o">=</span> <span class="n">beam</span><span class="p">[</span><span class="n">beam</span><span class="o">.</span><span class="n">get_reachedsource_index</span><span class="p">()]</span>
+        
+            <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Fetching HRTFs&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="p">,</span> <span class="n">HRTFModel</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">nfft</span><span class="p">,</span> <span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;nsamples&#39;</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nsamples</span><span class="p">,</span> <span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">left</span><span class="p">),</span> <span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>
+
+            <span class="c"># preparing target_source, coordinates</span>
+            <span class="n">target_source</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">int</span><span class="p">)</span>
+            <span class="c"># coordinates</span>
+            <span class="n">coordinates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="p">[(</span><span class="s">&#39;azim&#39;</span><span class="p">,</span><span class="s">&#39;f8&#39;</span><span class="p">),(</span><span class="s">&#39;elev&#39;</span><span class="p">,</span><span class="s">&#39;f8&#39;</span><span class="p">)])</span>
+            <span class="n">d</span><span class="p">,</span> <span class="n">az</span><span class="p">,</span> <span class="n">el</span> <span class="o">=</span> <span class="n">cartesian2spherical</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="p">,</span> <span class="n">unit</span> <span class="o">=</span> <span class="s">&#39;deg&#39;</span><span class="p">)</span>
+
+            <span class="n">coordinates</span><span class="p">[</span><span class="s">&#39;azim&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">az</span>
+            <span class="n">coordinates</span><span class="p">[</span><span class="s">&#39;elev&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">el</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_distancedependent</span><span class="p">:</span><span class="c">#isinstance(self.hrtfset, HRTFModel):</span>
+<span class="c">#                    print &#39;Is, indeed, distancedependent (in receivers)&#39;</span>
+<span class="c">#                    print &#39;az, el, d&#39;, (az[i], el[i], d[i])</span>
+                    <span class="n">cur_hrir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_hrir</span><span class="p">(</span><span class="n">az</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">el</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">d</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">cur_hrir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_hrir</span><span class="p">(</span><span class="n">az</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">el</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">data</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">cur_hrir</span><span class="o">.</span><span class="n">left</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">data</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">]</span> <span class="o">=</span> <span class="n">cur_hrir</span><span class="o">.</span><span class="n">right</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">target_source</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam</span><span class="o">.</span><span class="n">target_source</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Finished fetching HRTFs&#39;</span><span class="p">)</span>
+            <span class="n">HRIRs</span> <span class="o">=</span> <span class="n">ImpulseResponse</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">samplerate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span>
+                <span class="n">binaural</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                <span class="n">coordinates</span> <span class="o">=</span> <span class="n">coordinates</span><span class="p">,</span>
+                <span class="n">target_source</span> <span class="o">=</span> <span class="n">target_source</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">HRIRs</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">coords</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c"># TODO</span>
+            <span class="c"># do something better and move it somewhere else</span>
+            <span class="n">coordinates</span> <span class="o">=</span> <span class="n">_makecoordinates</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">binaural</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+            <span class="n">leftdata</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">left</span><span class="p">),</span>
+                                  <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)))</span>
+            <span class="n">rightdata</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">right</span><span class="p">),</span>
+                                  <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)))</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,(</span><span class="n">az</span><span class="p">,</span> <span class="n">el</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">coords</span><span class="p">):</span>
+                <span class="n">leftdata</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">get_hrir</span><span class="p">(</span><span class="n">az</span><span class="p">,</span> <span class="n">el</span><span class="p">,</span> <span class="n">method</span> <span class="o">=</span>
+                                                      <span class="n">method</span><span class="p">)</span><span class="o">.</span><span class="n">left</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">rightdata</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">get_hrir</span><span class="p">(</span><span class="n">az</span><span class="p">,</span> <span class="n">el</span><span class="p">,</span> <span class="n">method</span> <span class="o">=</span>
+                                                       <span class="n">method</span><span class="p">)</span><span class="o">.</span><span class="n">right</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">leftdata</span><span class="p">,</span> <span class="n">rightdata</span><span class="p">))</span>
+            <span class="n">HRIRs</span> <span class="o">=</span> <span class="n">ImpulseResponse</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">samplerate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span>
+                <span class="n">binaural</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                <span class="n">coordinates</span> <span class="o">=</span> <span class="n">coordinates</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">HRIRs</span>
+</div>
+<div class="viewcode-block" id="HRTFReceiver.computeIRs"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.HRTFReceiver.computeIRs">[docs]</a>    <span class="k">def</span> <span class="nf">computeIRs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the scene response convolved by the hrtfs.</span>
+<span class="sd">        depends on the form of the HRTFs.</span>
+<span class="sd">        </span>
+<span class="sd">        Computes the IRs from the scene given as a first argument, and convolves it correctly with the Receiver.</span>
+<span class="sd">        </span>
+<span class="sd">        Sample usage:</span>
+<span class="sd">        receiver.computeIRs(scene, </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Beam</span><span class="p">):</span>
+            <span class="n">beam</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">scene</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">beam</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="n">beam</span> <span class="o">=</span> <span class="n">beam</span><span class="p">[</span><span class="n">beam</span><span class="o">.</span><span class="n">get_reachedsource_index</span><span class="p">()]</span>
+        
+        <span class="n">newargs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">None</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">newargs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">newargs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam</span>
+        
+        <span class="n">HRIRs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">computeHRIRs</span><span class="p">(</span><span class="n">beam</span><span class="p">)</span>
+        <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;HRIRs are of length (</span><span class="si">%i</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">HRIRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">scenes</span><span class="o">.</span><span class="n">VoidScene</span><span class="p">):</span>
+            <span class="c"># in this case nothing has to be done with the environment,</span>
+            <span class="c"># so we just output the HRTFs</span>
+            <span class="c"># Hey maybe not! this shouldn&#39;t be used to fetch hrtfs, maybe something directly linked to the receiver (another method) would be better</span>
+            <span class="k">return</span> <span class="n">HRIRs</span>
+
+        <span class="n">kwdargs</span><span class="p">[</span><span class="s">&#39;binaural&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="n">kwdargs</span><span class="p">[</span><span class="s">&#39;collapse&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+        
+        <span class="n">IRs</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">computeIRs</span><span class="p">(</span><span class="o">*</span><span class="n">newargs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">)</span>
+
+        <span class="c"># if isinstance(scene, scenes.SimpleScene):</span>
+        <span class="c">#     kwdargs[&#39;binaural&#39;] = False</span>
+        <span class="c"># else:</span>
+        <span class="n">IRs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">asarray</span><span class="p">(</span><span class="n">IRs</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+        <span class="k">print</span> <span class="n">IRs</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Scene IRs are of length (</span><span class="si">%i</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">IRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Convoluting &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">)</span><span class="o">+</span><span class="s">&#39; scene responses with HRIRs&#39;</span><span class="p">)</span>
+
+        <span class="n">ir_offset0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">IRs</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-10</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">ir_offset1</span> <span class="o">=</span> <span class="n">IRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">IRs</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">,:])</span> <span class="o">&lt;</span> <span class="mf">1e-10</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">ir_offset0</span> <span class="o">==</span> <span class="n">ir_offset1</span> <span class="o">-</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Environment impulse response is just one delay + gain&#39;</span><span class="p">)</span>
+            <span class="c"># simple case, with only a delay and possibly a gain, so we just multiply</span>
+            <span class="n">gains</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">IRs</span><span class="p">[</span><span class="n">ir_offset0</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">IRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">HRIRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="n">convolution</span> <span class="o">=</span> <span class="n">HRIRs</span> <span class="o">*</span> <span class="n">gains</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># we do a real linear convolution, mostly because lengths never match</span>
+            <span class="c"># it is costly so we try and trim the scene IRs that are quite often sparse</span>
+            <span class="n">nir</span> <span class="o">=</span> <span class="n">ir_offset1</span> <span class="o">-</span> <span class="n">ir_offset0</span>
+            <span class="n">N</span> <span class="o">=</span>  <span class="n">nir</span> <span class="o">+</span> <span class="n">HRIRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+
+            <span class="n">IRs_padded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">IRs</span><span class="p">[</span><span class="n">ir_offset0</span><span class="p">:</span><span class="n">ir_offset1</span><span class="p">,</span> <span class="p">:],</span> 
+                                    <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span> <span class="o">-</span> <span class="n">nir</span><span class="p">,</span> <span class="n">IRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))))</span>
+            <span class="n">HRIRs_padded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">HRIRs</span><span class="p">,</span> 
+                                      <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">IRs_padded</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">HRIRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">HRIRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))))</span>
+
+            <span class="n">convolution</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">HRIRs_padded</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">complex</span><span class="p">)</span>
+            <span class="n">convolution</span> <span class="o">=</span> <span class="n">ifft</span><span class="p">(</span><span class="n">fft</span><span class="p">(</span><span class="n">IRs_padded</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="n">fft</span><span class="p">(</span><span class="n">HRIRs_padded</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="n">vstack</span><span class="p">((</span><span class="n">zeros</span><span class="p">((</span><span class="nb">max</span><span class="p">(</span><span class="n">ir_offset0</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="o">*</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">)),</span> <span class="n">convolution</span><span class="p">))</span>
+        <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Collapsing final responses&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">scene</span><span class="o">.</span><span class="n">nsources</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c"># More than one source</span>
+            <span class="c"># TODO </span>
+            <span class="n">allhrirs</span> <span class="o">=</span> <span class="n">zerosIR</span><span class="p">((</span><span class="n">res</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">2</span><span class="o">*</span><span class="n">scene</span><span class="o">.</span><span class="n">nsources</span><span class="p">),</span> <span class="n">binaural</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+            <span class="n">relativecoordinates</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">target_source</span> <span class="o">=</span> <span class="n">unique</span><span class="p">(</span><span class="n">HRIRs</span><span class="o">.</span><span class="n">target_source</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">scene</span><span class="o">.</span><span class="n">nsources</span><span class="p">):</span>
+                <span class="n">relativecoordinates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scene</span><span class="o">.</span><span class="n">sources</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">getRelativeSphericalCoords</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="p">,</span> <span class="n">unit</span> <span class="o">=</span> <span class="s">&#39;deg&#39;</span><span class="p">))</span>
+                <span class="n">allhrirs</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">res</span><span class="p">[:,</span> <span class="n">i</span><span class="o">*</span><span class="n">beamspersource</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">beamspersource</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">beamspersource</span><span class="p">)</span><span class="c">#left</span>
+                <span class="n">allhrirs</span><span class="p">[:,</span> <span class="n">i</span><span class="o">+</span><span class="n">scene</span><span class="o">.</span><span class="n">nsources</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">res</span><span class="p">[:,</span> <span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="o">+</span><span class="n">i</span><span class="o">*</span><span class="n">beamspersource</span><span class="p">:</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="o">+</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">beamspersource</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">beamspersource</span><span class="p">)</span><span class="c">#right</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">allhrirs</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Output of getIRs will containt nans&#39;</span><span class="p">)</span>
+            <span class="n">allhrirs</span><span class="o">.</span><span class="n">target_source</span> <span class="o">=</span> <span class="n">target_source</span>
+            <span class="n">allhrirs</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="n">relativecoordinates</span>
+            <span class="k">return</span> <span class="n">allhrirs</span>
+        
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># exactly one source</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">res</span><span class="p">[:,:</span><span class="mi">2</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">res</span><span class="p">[:,</span><span class="mi">2</span><span class="p">:],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span>
+                    <span class="n">left</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">left</span><span class="p">),</span><span class="mi">1</span><span class="p">)),</span> <span class="n">right</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">right</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+                                                               <span class="p">))</span>
+            <span class="n">coordinates</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">sources</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getRelativeSphericalCoords</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">ImpulseResponse</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> 
+                                   <span class="n">binaural</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                                   <span class="n">samplerate</span> <span class="o">=</span> <span class="n">HRIRs</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span>
+                                   <span class="n">target_source</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">sources</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_id</span><span class="p">(),</span> <span class="n">coordinates</span> <span class="o">=</span> <span class="n">coordinates</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+                                   
+</div>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">binaural</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+<span class="c">################### IRCAM receivers #################################</span>
+<span class="c"># One of them is exact (IRCAMSubjectReceiver) no interpolation...</span>
+<span class="c"># One of them is interpolated IRCAMInterpolatedRreceiver</span>
+<span class="c"># TODO: rethink/rewrite HRTFSets so that the only diff between the two is that.</span>
+        </div>
+<div class="viewcode-block" id="IRCAMSubjectReceiver"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.IRCAMSubjectReceiver">[docs]</a><span class="k">class</span> <span class="nc">IRCAMSubjectReceiver</span><span class="p">(</span><span class="n">HRTFReceiver</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Is used to place a know subject of the IRCAM database in a scene.</span>
+<span class="sd">    Initialized with the subject number, height, inter aural difference and orientation.</span>
+<span class="sd">    You must instanciate the IRCAMpath preference variable for it to work.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">orientation</span> <span class="o">=</span> <span class="n">FRONT</span><span class="p">,</span> <span class="n">subject</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">subject</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">subject</span> <span class="o">=</span> <span class="n">prefs</span><span class="o">.</span><span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;IRCAM_DEFAULTSUBJECT&#39;</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">subject</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s">&#39;You didn</span><span class="se">\&#39;</span><span class="s">t specify a subject, maybe you should instantiat IRCAM_DEFAULTSUBJECT in localprefs.py&#39;</span><span class="p">)</span>
+
+        <span class="n">IRCAMpath</span> <span class="o">=</span> <span class="n">spatprefs</span><span class="o">.</span><span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;IRCAMpath&#39;</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="n">hrtfset</span> <span class="o">=</span> <span class="n">IRCAM_LISTEN</span><span class="p">(</span><span class="n">IRCAMpath</span><span class="p">,</span> 
+                              <span class="n">compensated</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span><span class="o">.</span><span class="n">load_subject</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span> <span class="o">=</span> <span class="n">NewNewInterpolatingHRTFSet</span><span class="p">(</span><span class="n">hrtfset</span><span class="p">,</span>
+                                                  <span class="n">interpolation</span> <span class="o">=</span> <span class="s">&#39;closest&#39;</span><span class="p">)</span>
+
+        <span class="n">HRTFReceiver</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">orientation</span> <span class="o">=</span> <span class="n">orientation</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="IRCAMSubjectReceiver.get_normalization_factors"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.IRCAMSubjectReceiver.get_normalization_factors">[docs]</a>    <span class="k">def</span> <span class="nf">get_normalization_factors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the normalisation factors alphaleft alpharight so that all the filters on the left (resp. right) have a gain equals to 1. </span>
+<span class="sd">        </span>
+<span class="sd">        The gain of a filter being defined as the sqrt of the sum of the square of the amplitudes of the tf.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">tfs_left</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,:]</span>
+        <span class="n">tfs_left</span> <span class="o">=</span> <span class="n">fft</span><span class="p">(</span><span class="n">tfs_left</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">gains_left</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tfs_left</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">gain_left</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">gains_left</span><span class="p">)</span>
+
+        <span class="n">tfs_right</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">,:,:]</span>
+        <span class="n">tfs_right</span> <span class="o">=</span> <span class="n">fft</span><span class="p">(</span><span class="n">tfs_right</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">gains_right</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tfs_right</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">gain_right</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">gains_right</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gain_left</span><span class="p">,</span> <span class="n">gain_right</span>
+        </div>
+    <span class="k">def</span> <span class="nf">get_hrir</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+<span class="c">#        kwdargs[&#39;method&#39;] = &#39;closest&#39;</span>
+        <span class="k">return</span> <span class="n">HRTFReceiver</span><span class="o">.</span><span class="n">get_hrir</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">)</span>
+        
+    <span class="c">################# Utils for relative coordinates</span>
+    <span class="c"># Applies to OrientedReceiver</span>
+
+    <span class="k">def</span> <span class="nf">get_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordsfilter</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">az</span><span class="p">,</span> <span class="n">el</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">compensatedcoordinates</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">coordsfilter</span><span class="p">(</span><span class="n">az</span><span class="p">,</span> <span class="n">el</span><span class="p">):</span>
+                <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">az</span><span class="p">,</span> <span class="n">el</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">def</span> <span class="nf">plot_forEl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">el</span><span class="p">,</span> <span class="n">nfft</span> <span class="o">=</span> <span class="mi">8192</span><span class="p">,</span> <span class="n">fig</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">display</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="n">coordsfilter</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">azim</span><span class="p">,</span> <span class="n">elev</span><span class="p">:</span> <span class="n">elev</span><span class="o">==</span><span class="n">el</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_coordinates</span><span class="p">(</span><span class="n">coordsfilter</span><span class="p">)</span>
+        <span class="n">HIRs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">computeHRIRs</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+        <span class="n">azs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">az</span> <span class="k">for</span> <span class="p">(</span><span class="n">az</span><span class="p">,</span><span class="n">el</span><span class="p">)</span> <span class="ow">in</span> <span class="n">coords</span><span class="p">])</span>
+        <span class="n">els</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">freqs</span> <span class="o">=</span> <span class="n">fftfreq</span><span class="p">(</span><span class="n">nfft</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">samplerate</span>
+        
+        <span class="n">leftHRTFs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nfft</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">HRIRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">rightHRTFs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nfft</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">HRIRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">HRIRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mi">2</span><span class="p">):</span>
+            <span class="n">leftHRTFs</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">fft</span><span class="p">(</span><span class="n">HRIRs</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">n</span> <span class="o">=</span> <span class="n">nfft</span><span class="p">))[:</span><span class="n">nfft</span><span class="o">/</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">rightHRTFs</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">fft</span><span class="p">(</span><span class="n">HRIRs</span><span class="p">[:,</span><span class="n">HRIRs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">n</span> <span class="o">=</span> <span class="n">nfft</span><span class="p">))[:</span><span class="n">nfft</span><span class="o">/</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">figure</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+        <span class="n">ax1</span> <span class="o">=</span> <span class="n">subplot</span><span class="p">(</span><span class="mi">211</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s">&#39;Left HRTFs, el=&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">el</span><span class="p">)</span><span class="o">+</span><span class="s">&#39; deg&#39;</span><span class="p">)</span>
+<span class="c">#        ax = imshow(leftHRTFs.T, aspect = &#39;auto&#39;, interpolation</span>
+<span class="c">#        =&#39;nearest&#39;)</span>
+        <span class="n">pcolor</span><span class="p">(</span><span class="n">freqs</span><span class="p">[:</span><span class="n">nfft</span><span class="o">/</span><span class="mi">2</span><span class="p">],</span> <span class="n">azs</span> <span class="p">,</span> <span class="n">leftHRTFs</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+<span class="c">#        imshow(azs, freqs, leftHRTFs.T)</span>
+        <span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Azimuth&#39;</span><span class="p">)</span>
+        <span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Frequency (Hz)&#39;</span><span class="p">)</span>
+        <span class="n">colorbar</span><span class="p">()</span>
+        <span class="n">ax2</span> <span class="o">=</span> <span class="n">subplot</span><span class="p">(</span><span class="mi">212</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s">&#39;Right HRTFs, el=&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">el</span><span class="p">)</span><span class="o">+</span><span class="s">&#39; deg&#39;</span><span class="p">)</span>
+        <span class="n">imshow</span><span class="p">(</span><span class="n">rightHRTFs</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">aspect</span> <span class="o">=</span> <span class="s">&#39;auto&#39;</span><span class="p">)</span>
+        <span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Azimuth&#39;</span><span class="p">)</span>
+        <span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Frequency (Hz)&#39;</span><span class="p">)</span>
+<span class="c">#        imshow(freqs, azs, rightHRTFs.T)</span>
+        <span class="n">colorbar</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">display</span><span class="p">:</span>
+            <span class="n">show</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">binaural</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">nfft</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="IRCAMInterpolatingReceiver"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.IRCAMInterpolatingReceiver">[docs]</a><span class="k">class</span> <span class="nc">IRCAMInterpolatingReceiver</span><span class="p">(</span><span class="n">HRTFReceiver</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Implements a spatializer counter part of the hrtfsets in Brian.</span>
+<span class="sd">    Is used to place a know subject of the IRCAM database in a scene.</span>
+<span class="sd">    Initialized with the subject number, height, inter aural difference and orientation.</span>
+<span class="sd">    You must instantiate the IRCAMpath preference variable for it to work.</span>
+<span class="sd">    </span>
+<span class="sd">    has an attribute hrtfset from which it gets the hrirs through hrtfset.get_hrir(az, el, distance = ...)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">orientation</span> <span class="o">=</span> <span class="n">FRONT</span><span class="p">,</span> <span class="n">subject</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> 
+                 <span class="n">compensated</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">subject</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">subject</span> <span class="o">=</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;IRCAM_DEFAULTSUBJECT&#39;</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">subject</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s">&#39;You didn</span><span class="se">\&#39;</span><span class="s">t specify a subject, maybe you should instantiat IRCAM_DEFAULTSUBJECT in localprefs.py&#39;</span><span class="p">)</span>
+        <span class="n">IRCAMpath</span> <span class="o">=</span> <span class="n">spatprefs</span><span class="o">.</span><span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;IRCAMpath&#39;</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="n">hrtfset</span> <span class="o">=</span> <span class="n">IRCAM_LISTEN</span><span class="p">(</span><span class="n">IRCAMpath</span><span class="p">,</span> 
+                              <span class="n">compensated</span> <span class="o">=</span> <span class="n">compensated</span><span class="p">)</span><span class="o">.</span><span class="n">load_subject</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span> <span class="o">=</span> <span class="n">NewNewInterpolatingHRTFSet</span><span class="p">(</span><span class="n">hrtfset</span><span class="p">,</span>
+                                                  <span class="n">interpolation</span> <span class="o">=</span> <span class="s">&#39;linear&#39;</span><span class="p">)</span>
+
+        <span class="n">HRTFReceiver</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">orientation</span> <span class="o">=</span> <span class="n">orientation</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">binaural</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+<span class="c">######################## Dummy binaural receiver</span></div>
+<div class="viewcode-block" id="HeadReceiver"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.HeadReceiver">[docs]</a><span class="k">class</span> <span class="nc">HeadReceiver</span><span class="p">(</span><span class="n">OrientedReceiver</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Initialized with the height of the head center and interaural distance.</span>
+<span class="sd">    Is a simple two-points receiver that represents an empty head.</span>
+<span class="sd">    </span>
+<span class="sd">    ** Initialization ** </span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">iad</span><span class="p">,</span> <span class="n">orientation</span> <span class="o">=</span> <span class="n">FRONT</span><span class="p">):</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">height</span> <span class="o">*</span> <span class="n">UP</span><span class="p">)</span>
+        <span class="n">OrientedReceiver</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">orientation</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iad</span> <span class="o">=</span> <span class="n">iad</span>
+
+    <span class="k">def</span> <span class="nf">getEarPosition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">whichone</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">UP</span><span class="o">.</span><span class="n">vectorial_product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orientation</span><span class="p">)</span><span class="c">#vector from center to left ear</span>
+        <span class="k">if</span> <span class="n">whichone</span> <span class="o">==</span> <span class="s">&#39;left&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Point</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iad</span><span class="o">/</span><span class="mf">2.0</span><span class="o">*</span><span class="n">d</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">whichone</span> <span class="o">==</span> <span class="s">&#39;right&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Point</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">iad</span><span class="o">/</span><span class="mf">2.0</span><span class="o">*</span><span class="n">d</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Fetched ear position must be left or right, it was &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">whichone</span><span class="p">))</span>
+    
+<div class="viewcode-block" id="HeadReceiver.getSphericalBeam"><a class="viewcode-back" href="../../user/receivers.html#spatializer.receivers.HeadReceiver.getSphericalBeam">[docs]</a>    <span class="k">def</span> <span class="nf">getSphericalBeam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a spherical beam with 2*n rays, the first half coming from the left ear and the scond from the right ear.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">b1</span> <span class="o">=</span> <span class="n">SphericalBeam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getEarPosition</span><span class="p">(</span><span class="s">&#39;left&#39;</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">b2</span> <span class="o">=</span> <span class="n">SphericalBeam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getEarPosition</span><span class="p">(</span><span class="s">&#39;right&#39;</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">b1</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">b2</span><span class="p">)</span>
+</div>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">binaural</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">get_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">UP</span><span class="o">.</span><span class="n">vectorial_product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orientation</span><span class="p">)</span><span class="c">#vector from center to left ear</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">positions</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iad</span><span class="o">/</span><span class="mf">2.0</span><span class="o">*</span><span class="n">d</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">positions</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iad</span><span class="o">/</span><span class="mf">2.0</span><span class="o">*</span><span class="n">d</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">positions</span>
+    
+    
+
+
+<span class="c">########################## Multiple receiver #################</span>
+</div>
+<span class="k">class</span> <span class="nc">ArrayReceiver</span><span class="p">(</span><span class="n">Receiver</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">positions</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">positions</span> <span class="o">=</span> <span class="n">positions</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">npositions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">positions</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    
+    <span class="k">def</span> <span class="nf">get_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">positions</span>
+
+<span class="c">################### Spherical Model Receiver ########################</span>
+
+<span class="k">class</span> <span class="nc">SphericalHeadReceiver</span><span class="p">(</span><span class="n">HRTFReceiver</span><span class="p">,</span> <span class="n">HeadReceiver</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">iad</span><span class="p">,</span> <span class="n">earelevation</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">subject</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> 
+                 <span class="n">samplerate</span> <span class="o">=</span> <span class="mi">44100</span><span class="o">*</span><span class="n">Hz</span><span class="p">,</span> <span class="n">nfft</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hrtfset</span> <span class="o">=</span> <span class="n">SphericalHead</span><span class="p">(</span><span class="n">iad</span><span class="p">,</span> <span class="n">earelevation</span><span class="p">,</span>
+                                     <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">,</span> <span class="n">nfft</span> <span class="o">=</span> <span class="n">nfft</span><span class="p">)</span>
+        <span class="n">HeadReceiver</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">iad</span><span class="p">)</span>
+        <span class="n">HRTFReceiver</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Spatializer 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../spatializer.html" >spatializer</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Victor Benichoux.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
