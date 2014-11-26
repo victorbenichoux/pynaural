@@ -296,15 +296,18 @@ class SphericalHeadReceiver(HRTFReceiver):
     ** Initialization **
 
     '''
-    def __init__(self, height, iad, orientation = FRONT):
+    def __init__(self, height, iad, orientation = FRONT, samplerate = 44100.,
+                    nfft = 1024, pre_delay = 128):
         if isinstance(height, float):
             position = Point(height * UP)
         else:
             position = height
         OrientedReceiver.__init__(self, position, orientation)
-        self.headmodel = SphericalHead(iad, (0,0))
+        self.headmodel = SphericalHead(iad, (0,0), samplerate = samplerate, nfft = nfft)
+        self.pre_delay = pre_delay
         self.iad = iad
         self.nsamples = self.headmodel.nfft
+        self.samplerate = samplerate
 
     def get_ear_position(self, whichone):
         d = UP.vectorial_product(self.orientation)#vector from center to left ear
@@ -316,7 +319,7 @@ class SphericalHeadReceiver(HRTFReceiver):
             ValueError('Fetched ear position must be left or right, it was '+str(whichone))
 
     def get_hrir(self, az, el, d = 20):
-        return self.headmodel.get_hrir(az, el)
+        return self.headmodel.get_hrir(az, el, pre_delay = self.pre_delay)
 
 
 ################### closest coordinates #################################

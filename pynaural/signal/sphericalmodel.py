@@ -50,7 +50,7 @@ class SphericalHead(object):
         if isinstance(earpos, tuple):
             earelevation, earazimuth = earpos
         else:
-            earelevation = 0
+            earelevation = 0.
             earazimuth = earpos
             
         self.a = float(iad)/2

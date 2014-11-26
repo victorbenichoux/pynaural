@@ -16,10 +16,10 @@ from pynaural.raytracer.geometry.base import *
 from pynaural.signal.misc import *
 from pynaural.signal.smoothing import *
 from pynaural.utils.spatprefs import get_pref
+from pynaural.utils.debugtools import log_debug
 
 
-
-__all__ = ['ImpulseResponse',
+__all__ = ['ImpulseResponse', 'TransferFunction',
            'onesIR', 'zerosIR', 'delayIR', 'binauralIR',
            'dur2sample', 'sample2dur', 'TransferFunction',
            'onesTF', 'zerosTF', 'delayTF', 'binauralTF',
@@ -204,6 +204,22 @@ class ImpulseResponse(np.ndarray):
         data = np.vstack((self, zero))
         kwdargs = self.get_kwdargs()
         return ImpulseResponse(data, **kwdargs)
+
+    def ramp(self, nsamples, where = 'both'):
+        '''
+        Adds the specified number of zeros at the end of the IR
+        '''
+        envelope = np.ones((self.nsamples, 1))
+        if where == 'in':
+            envelope[:nsamples,0] = (1 - np.cos(np.linspace(0, np.pi, nsamples)))/2
+        elif where == 'out':
+            envelope[-nsamples:,0] = (1 - np.cos(np.linspace(np.pi, 0, nsamples)))/2
+        else:
+            envelope[:nsamples,0] = (1 - np.cos(np.linspace(0, np.pi, nsamples)))/2
+            envelope[-nsamples:,0] = (1 - np.cos(np.linspace(np.pi, 0, nsamples)))/2
+        data = np.asarray(self)
+        kwdargs = self.get_kwdargs()
+        return ImpulseResponse(data*envelope, **kwdargs)
 
     def subsample(self, factor):
         data = np.zeros((self.shape[0]/factor, self.shape[1]))
@@ -406,18 +422,18 @@ class ImpulseResponse(np.ndarray):
                 sound = Sound.load(sound)
 
         if reference:
-            db.log_debug('Listening to original sound')
+            log_debug('Listening to original sound')
             sound.atlevel(60*dB).play(sleep = sleep)
 
         if self._has_coordinates:
             if self.binaural:
-                db.log_debug('Listening to IR for coordinates '+
+                log_debug('Listening to IR for coordinates '+
                              str(self.coordinates[:len(self.coordinates)/2]))
             else:
-                db.log_debug('Listening to IR for coordinates '+
+                log_debug('Listening to IR for coordinates '+
                              str(self.coordinates))
         else:
-            db.log_debug('Listening to IR')
+            log_debug('Listening to IR')
             
         out = self.apply(sound)
         out = Sound.sequence(out)
@@ -816,6 +832,7 @@ class TransferFunction(np.ndarray):
                 data_ft = fft(data, axis = 0)
             # then add all relevant attributes
             kwdargs = data.get_kwdargs()
+            kwdargs.pop('is_delay')
             return TransferFunction(data_ft, **kwdargs)
         if isinstance(data, np.ndarray):
             if samplerate is None:

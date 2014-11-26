@@ -25,7 +25,6 @@ DEBUG_LEVEL = 20
 # defaults to Hz
 DEFAULT_SAMPLERATE = 44100.
 
-DEFAULT_SOUND = '/not/specified.wav'
 
 # @ 44.1*kHz
 

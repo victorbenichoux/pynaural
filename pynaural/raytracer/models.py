@@ -6,6 +6,8 @@ from pynaural.raytracer.acoustics import spherical_ref_factor
 from pynaural.signal.impulseresponse import TransferFunction, ImpulseResponse
 import numpy as np
 
+from matplotlib.pyplot import *
+
 __all__ = ['NaturalGroundModel', 'DelayAttenuationModel']
 
 class NaturalGroundModel(object):
@@ -30,8 +32,8 @@ class NaturalGroundModel(object):
         distances = beam.get_totaldists()
 
         for ksource in xrange(nsources):
-            reflected_tfs[:, ksource] = spherical_ref_factor(distances[2*ksource], beam.incidences[ksource*2], f, sigma = self.sigma)
-            reflected_tfs[freqs>0, :] = np.conj(reflected_tfs[freqs>0, :])
+            reflected_tfs[:, ksource] = -spherical_ref_factor(distances[2*ksource], beam.incidences[ksource*2], f, sigma = self.sigma)
+            #reflected_tfs[freqs<=0, :] = np.conj(reflected_tfs[freqs>0, :])
 
         tf_data = np.ones((self.nfft, nsources*2), dtype = complex)
         tf_data[:, 1::2] = reflected_tfs
@@ -44,7 +46,25 @@ class NaturalGroundModel(object):
         coordinates['azim'] = beam_coordinates[1]
         coordinates['elev'] = beam_coordinates[2]
 
-        return ImpulseResponse(TransferFunction(tf_data, coordinates = coordinates))
+        ir_data = np.fft.ifft(tf_data, axis = 0).real
+        delays = np.rint(beam.get_totaldelays()*self.samplerate)
+        print beam.get_totaldelays()
+
+        ir_data_final = np.zeros((self.nfft + delays.max(), nsources*2))
+        for k in range(nsources):
+            ir_data_final[delays[2*k]:delays[2*k]+self.nfft,2*k] = ir_data[:,2*k]
+            ir_data_final[:self.nfft,2*k+1] = ir_data[:,2*k+1]
+        # print tf_data
+        # figure()
+        # subplot(211)
+        # semilogx(20*np.log10(np.abs(tf_data)))
+        # subplot(212)
+        # plot(ir_data_final)
+        # show()
+
+        return ImpulseResponse(ir_data,
+                                samplerate = self.samplerate,
+                                coordinates = coordinates)
 
 ################## Delay + Global Attenuation Model ############################
 
@@ -100,5 +120,7 @@ class DelayAttenuationModel(object):
         coordinates['azim'] = beam_coordinates[1]
         coordinates['elev'] = beam_coordinates[2]
 
-        return ImpulseResponse(data_ir, coordinates = coordinates, is_delay = True)
+        return ImpulseResponse(data_ir,
+                                samplerate = self.samplerate,
+                                coordinates = coordinates, is_delay = True)
 
