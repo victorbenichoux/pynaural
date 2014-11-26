@@ -61,6 +61,7 @@ class ImpulseResponse(np.ndarray):
                 binaural = False, # binaural flag
                 coordinates = None, # coordinates attributes
                 target_source = None, # spatializer related
+                is_delay = False
                 ):
         # Possibly initialize with TransferFunction
         if isinstance(data, TransferFunction):
@@ -88,6 +89,7 @@ class ImpulseResponse(np.ndarray):
         x.samplerate = ensure_Hz(samplerate)
         # flags for different types of IR
         x.binaural = binaural
+        x.is_delay = is_delay
 
         x.coordinates = _makecoordinates(x.shape, coordinates, binaural = binaural)
         x.target_source = _make_target_source(x.shape, target_source, binaural = binaural)
@@ -108,7 +110,9 @@ class ImpulseResponse(np.ndarray):
             # coordinates attributes
             'coordinates' : self.coordinates,
             # spatializer related            
-            'target_source' : self.target_source, 
+            'target_source' : self.target_source,
+            # to simplify apply
+            'is_delay' : self.is_delay,
             }
 
         if slice is None:
@@ -243,9 +247,6 @@ class ImpulseResponse(np.ndarray):
                 return self.shape[1]
         else:
             raise AttributeError('Impulse Response doesnt have coordinates')
-            
-    def forcoordinate(self, *args):
-        return self.forcoordinates(*args)
 
     def forcoordinates(self, *args):
         '''
@@ -259,8 +260,7 @@ class ImpulseResponse(np.ndarray):
         hrir.forcoordinates(i) to iterate over positions
         '''
         # argument parsing
-        print args
-        if len(args) == 1 and type(args[0]) == int:
+        if len(args) == 1 and isinstance(args[0], int):
             # indexing is just the i'th IR
             i = args[0]
             # kwdargs handling
@@ -275,7 +275,6 @@ class ImpulseResponse(np.ndarray):
             else:
                 data = self[:,i]
             out = ImpulseResponse(data, **kwdargs)
-            print "out", out
             return out
 
         if len(args) == 1 and callable(args[0]):
@@ -355,24 +354,6 @@ class ImpulseResponse(np.ndarray):
     def sources(self):
         return np.unique(self.target_source)
 
-    def collapse(self):
-        '''
-        An ImpulseResponse that is the result from Spatializer computations has sources attached to it and possibly multiple rays per source.
-        Using collapse on it yields a new TransferFunction with only one TransferFunction per source.
-        '''
-        res = zerosIR(self.shape[0], 
-                      target_source = self.sources, binaural = self.binaural)
-        for k, id in enumerate(np.unique(self.target_source)):
-            chunk = self.forsource(id)
-
-            if self.binaural:
-                middle = chunk.shape[1]/2
-                res[:, k] = np.sum(chunk[:,:middle], axis = 1)                
-                res[:, k+self.nsources/2] = np.sum(chunk[:,middle:], axis = 1)
-            else:
-                res[:, k] = np.sum(chunk, axis = 1)                
-        return res
-
     ################### DSP Features
     # -listening of IRs
     # -applying to sounds
@@ -410,7 +391,7 @@ class ImpulseResponse(np.ndarray):
         TDO: WRITE DOC
         '''
         if sound is None:
-            soundfile = prefs.get_pref('DEFAULT_SOUND', default = -1)
+            soundfile = get_pref('DEFAULT_SOUND', default = -1)
             if not soundfile == -1:
                 import os
                 if os.path.isdir(soundfile):
@@ -452,7 +433,7 @@ class ImpulseResponse(np.ndarray):
         Gain normalisation (outlevel kwdarg): 
         By default no gain, otherwise the gain is adjusted to that the loudest channel is at the level specified by outlevel. Hence the difference in level between the two channels is preserved. This is a different behavior from the one in brian.hears.sounds        
         '''
-        if isinstance(other, Sound):
+        if isinstance(other, Sound) or isinstance(other, ImpulseResponse):
             if not other.samplerate == self.samplerate:
                 if True:
                     db.log_debug('Warning, samplerates not matching!')
@@ -466,24 +447,41 @@ class ImpulseResponse(np.ndarray):
             else:
                 return self._apply(other, outlevel = outlevel)
         else:
-            raise AttributeError('Can only apply an IR to a sound')
+            raise AttributeError('Can only apply to a sound or IR')
             
     def _apply(self, other, outlevel = None):
+
         if not self.binaural:
             res = zeros((other.shape[0]+self.shape[0]-1, other.nchannels))
             for chan in range(other.nchannels):
-                res[:, chan] = fftconvolve(other[:,chan].flatten(), self)
+                if self.is_delay:
+                    delay_samples = np.nonzero(self.flatten())[0]
+                    res[delay_samples:delay_samples+other.shape[0], chan] = other[:,chan].flatten()
+                else:
+                    res[:, chan] = fftconvolve(other[:,chan].flatten(), self)
             return Sound(res, samplerate = other.samplerate)
         else:
             res = zeros((other.shape[0]+self.shape[0]-1, 2))
             if other.nchannels !=1:
 #                raise ValueError('Don\'t know what to do with 2 channel sound and binaural IR')
                 db.log_debug('Applying IR separately to each channel')
-                res[:,0] = fftconvolve(other.left.flatten(), self[:,0].flatten())
-                res[:,1] = fftconvolve(other.right.flatten(), self[:,1].flatten())
-            else:        
-                res[:,0] = fftconvolve(other.flatten(), self[:,0].flatten())
-                res[:,1] = fftconvolve(other.flatten(), self[:,1].flatten())
+                if self.is_delay:
+                    print "here0"
+                    delay_samples = np.nonzero(self.flatten())[0]
+                    res[delay_samples:delay_samples+other.shape[0], chan] = other[:,chan].flatten()
+                else:
+                    res[:,0] = fftconvolve(other.left.flatten(), self[:,0].flatten())
+                    res[:,1] = fftconvolve(other.right.flatten(), self[:,1].flatten())
+            else:
+                if self.is_delay:
+                    print "here"
+                    delay_samples_0 = np.nonzero(self[:,0].flatten())[0]
+                    delay_samples_1 = np.nonzero(self[:,1].flatten())[0]
+                    res[delay_samples_0:delay_samples_0+other.shape[0], 0] = other[:,0].flatten()
+                    res[delay_samples_1:delay_samples_1+other.shape[0], 1] = other[:,1].flatten()
+                else:
+                    res[:,0] = fftconvolve(other.flatten(), self[:,0].flatten())
+                    res[:,1] = fftconvolve(other.flatten(), self[:,1].flatten())
                 if isinstance(outlevel, dB_type):
                     rms_dB_left = dB_SPL(res[:,0])
                     rms_dB_right = dB_SPL(res[:,1])
@@ -754,6 +752,7 @@ class ImpulseResponse(np.ndarray):
         defaultsamplerate = prefs.get_pref('DEFAULT_SAMPLERATE', 
                                            default = 44.1*kHz)
         samplerate = kwdargs.get('samplerate', defaultsamplerate)
+        kwdargs['is_delay'] = True
         res = zerosIR(shape, **kwdargs)
         if isduration(delay):
             delay = dur2sample(delay, samplerate)
@@ -963,8 +962,6 @@ class TransferFunction(np.ndarray):
                 return self.shape[1]
         else:
             raise AttributeError('Impulse Response doesnt have coordinates')
-    def forcoordinate(self, *args):
-        return self.forcoordinates(*args)
 
     def forcoordinates(self, *args):
         '''
@@ -976,7 +973,7 @@ class TransferFunction(np.ndarray):
         value peut etre une condition: mieux!
         '''
         # argument parsing
-        if len(args) == 1 and type(args[0]) == int:
+        if len(args) == 1 and isinstance(args[0], int):
             # indexing is just the i'th IR
             i = args[0]
             # kwdargs handling

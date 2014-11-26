@@ -2,6 +2,7 @@ from pynaural.raytracer.geometry.rays import SphericalBeam, Beam
 from pynaural.raytracer.geometry.base import Point, Vector, FRONT, BACK, LEFT, RIGHT, UP, DOWN, ORIGIN, \
     cartesian2spherical
 from pynaural.signal.impulseresponse import ImpulseResponse, _makecoordinates, zerosIR
+from pynaural.signal.sphericalmodel import SphericalHead
 from pynaural.utils.spatprefs import get_pref
 from pynaural.utils.debugtools import log_debug
 from pynaural.io.hrtfs.ircam import ircamHRIR
@@ -96,12 +97,20 @@ class HRTFReceiver(OrientedReceiver):
         self.is_distancedependent = is_distancedependent
 
     def get_hrir(self, az, el):
-        print 'required %.1f, %.1f' % (az, el)
-        print self.hrtfset
         idmin = get_closest_coords(self.coordinates, (az, el), retval = 'idmin')
-
         hrir = self.hrtfset.forcoordinates(idmin)
         return hrir
+
+    def collapse(self, irs):
+        data = np.zeros((self.nsamples + irs.nsamples - 1, 2))
+        ncoordinates = irs.ncoordinates
+        for k in xrange(ncoordinates):
+            az, el = irs.coordinates['azim'][k], irs.coordinates['elev'][k]
+            hrir = self.get_hrir(az, el)
+            cur_ir = irs.forcoordinates(k).apply(hrir)
+            data[:,0] += cur_ir[:,0].flatten()
+            data[:,1] += cur_ir[:,1].flatten()
+        return ImpulseResponse(data, binaural = True)
 
     def computeHRIRs(self, *args, **kwdargs):
         '''
@@ -168,6 +177,8 @@ class HRTFReceiver(OrientedReceiver):
                                     binaural = True,
                                     coordinates = coordinates)
             return HRIRs
+
+
 
     def computeIRs(self, *args, **kwdargs):
         '''
@@ -277,7 +288,7 @@ class IRCAMSubjectReceiver(HRTFReceiver):
         HRTFReceiver.__init__(self, position, ircamHRIR(subject, path=path), orientation=orientation, is_distancedependent=False)
 
 ######################## Spherical head model
-class SphericalHeadReceiver(OrientedReceiver):
+class SphericalHeadReceiver(HRTFReceiver):
     '''
     Initialized with the height of the head center and interaural distance.
     Is a simple two-points receiver that represents an empty head.
@@ -286,10 +297,14 @@ class SphericalHeadReceiver(OrientedReceiver):
 
     '''
     def __init__(self, height, iad, orientation = FRONT):
-        position = Point(height * UP)
+        if isinstance(height, float):
+            position = Point(height * UP)
+        else:
+            position = height
         OrientedReceiver.__init__(self, position, orientation)
         self.headmodel = SphericalHead(iad, (0,0))
         self.iad = iad
+        self.nsamples = self.headmodel.nfft
 
     def get_ear_position(self, whichone):
         d = UP.vectorial_product(self.orientation)#vector from center to left ear
@@ -301,7 +316,7 @@ class SphericalHeadReceiver(OrientedReceiver):
             ValueError('Fetched ear position must be left or right, it was '+str(whichone))
 
     def get_hrir(self, az, el, d = 20):
-        return self.headmodel.get_hrir(az, el, d)
+        return self.headmodel.get_hrir(az, el)
 
 
 ################### closest coordinates #################################

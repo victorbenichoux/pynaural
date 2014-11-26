@@ -41,7 +41,7 @@ class Surface(object):
     .. automethod :: is_in_updomain
 
     '''
-    def __init__(self, model = None, label = None):
+    def __init__(self, model = {'alpha':0.96}, label = None):
         self.model = model
         self.label = label
     

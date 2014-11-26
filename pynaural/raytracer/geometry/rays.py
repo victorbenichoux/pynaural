@@ -214,17 +214,15 @@ class Beam(object):
     ################### REACHED SOURCE
     def get_reachedsource(self):
         '''
-        Wheter of not the rays in the Beam reached their source at any
+        Wether of not the rays in the Beam reached their source at any
         depth in the chained list. Note the difference with the
         attribute sourcereached.
         Returns an array with boolean values.
         '''
-        res = np.zeros(self.nrays, dtype = bool)
-        res[np.nonzero(self.sourcereached)] = True
         if self.hasNext():
-            return res + self.next.get_reachedsource()
+            return self.sourcereached + self.next.get_reachedsource()
         else: 
-            return res
+            return self.sourcereached
 
     def get_reachedsource_index(self):
         '''
@@ -279,7 +277,6 @@ class Beam(object):
     def _get_at_depth(self, depth, attribute):
         if isinstance(depth, (int, float)):
             depth = np.array([depth])
-
         
         if (depth == 0).all():
             return getattr(self, attribute)

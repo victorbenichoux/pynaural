@@ -16,3 +16,4 @@ model = NaturalGroundModel(sigma)
 model.apply(beam)
 
 #ir = scene.computeIRs(scene, nfft=4096)
+

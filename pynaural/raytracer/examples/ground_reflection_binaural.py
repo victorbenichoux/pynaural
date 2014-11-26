@@ -9,7 +9,7 @@ source2 = Source(UP + FRONT + 1.5*RIGHT)
 scene.add(source, source2)
 
 # add a simple receiver
-receiver = Receiver(1*UP)
+receiver = SphericalHeadReceiver(1*UP, 0.1)
 
 # render the ray paths
 paths = scene.render(receiver)
@@ -19,3 +19,4 @@ model = NaturalGroundModel()
 irs = model.apply(paths)
 
 
+receiver.collapse(irs)

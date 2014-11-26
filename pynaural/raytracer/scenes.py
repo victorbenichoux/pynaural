@@ -10,7 +10,7 @@ from pynaural.raytracer.receivers import Receiver
 from pynaural.raytracer.acoustics import c
 
 
-DEFAULT_PRECISION = 1e-2 #precision, to prevent self intersection, here 1cm
+DEFAULT_PRECISION = 1e-5 #precision, to prevent self intersection, here 1cm
 DEFAULT_STOPCONDITION = 30 # default number of reflections
 DEFAULT_NRAYS = 1e6 # default number of rays
 
@@ -41,8 +41,7 @@ class GeometricScene(object):
     
     ** Initialization **
 
-    To initialize a GeometricScene, one can use any number of
-    arguments, corresponding to objects to be added to the scene. 
+
 
     ``stopcondition = 30`` defines the stopcondition of the raytracing algorithm.
 
@@ -94,19 +93,19 @@ class GeometricScene(object):
     
 
     '''
-    def __init__(self, *args, **kwdargs):
-        stopcondition = kwdargs.get('stopcondition', DEFAULT_STOPCONDITION)
-        self.nrays = kwdargs.get('nrays', DEFAULT_NRAYS)
-        self.precision = kwdargs.get('precision', DEFAULT_PRECISION)
-
+    def __init__(self, objects, stopcondition = DEFAULT_STOPCONDITION, nrays = DEFAULT_NRAYS, precision = DEFAULT_PRECISION):
         self.set_stopcondition(stopcondition)
+
+        self.nrays = nrays
+        self.precision = precision
 
         self.surfaces = []
         self.nsurfaces = 0
         self.sources = []        
         self.nsources = 0
-        for arg in args:
-            self.add(arg)
+
+        for obj in objects:
+            self.add(obj)
 
     def add(self, *obj):
         '''
@@ -192,9 +191,6 @@ class GeometricScene(object):
         
         for i in range(int(Niter)):
             v, a = self.compute_volume_areas_once(**kwdargs)
-            if False:
-                print v
-                print a
             self._volume += v/Niter
             self._areas += a/Niter
 
@@ -446,8 +442,7 @@ class GeometricScene(object):
         ``nrays = None`` passed to get_beam.
         '''
         if isinstance(obj, Receiver):
-            nrays = kwdargs.get('nrays', self.nrays)
-            beam = self.get_beam(obj.position, nrays = nrays)
+            beam = self.get_beam(obj.position)
         elif isinstance(obj, Beam):
             beam = obj
         else:
@@ -644,7 +639,7 @@ class GeometricScene(object):
         '''
         if not hasattr(self, '_volume'):
             self.compute_volume_areas(**{})
-        tmp = np.sum([self.surfaces[i].model.alpha*self.area(i) 
+        tmp = np.sum([self.surfaces[i].model['alpha']*self.area(i)
                       for i in range(self.nsurfaces)])
         return 0.161*self.volume()/tmp
     
@@ -654,7 +649,7 @@ class GeometricScene(object):
         '''
         if not hasattr(self, '_volume'):
             self.compute_volume_areas(**{})
-        tmp = np.sum([self.surfaces[i].model.alpha*self.area(i) 
+        tmp = np.sum([self.surfaces[i].model['alpha']*self.area(i)
                       for i in range(self.nsurfaces)])
         S = self.total_enclosure_area()
         tmp = -S*np.log(1-tmp/S)
@@ -720,13 +715,13 @@ class GroundScene(GeometricScene):
     outdoor = GroundScene(model = RigidReflectionModel(3*dB))
 
     '''
-    def __init__(self, mode = 'ground'):
+    def __init__(self, mode = 'ground', stopcondition = None):
         if mode == 'ground':
             super(GroundScene, self).__init__(
-                Plane(ORIGIN, UP), stopcondition = 2)
+                [Plane(ORIGIN, UP)], stopcondition = 2)
             self.ground = self.surfaces[0]
         elif mode == 'wall':
-            super(GroundScene, self).__init__(WALL, stopcondition = 2)
+            super(GroundScene, self).__init__([WALL], stopcondition = 2)
             self.wall = self.surfaces[0]
     
     def get_beam(self, position, nrays = DEFAULT_NRAYS):
@@ -779,31 +774,33 @@ class RoomScene(GeometricScene):
     room = RoomScene(3*m, 4*m, 2.5*m)
     
     '''
-    def __init__(self, l, L, h, **kwdargs):
-        if 'nreflections' in kwdargs:
-            self.nreflections = kwdargs['nreflections']
-            kwdargs['stopcondition'] = self.nreflections + 1
-            
+    def __init__(self, l, L, h, nreflections = 5, modeldict = {'alpha':0.01}):
+        self.nreflections = nreflections
+        stopcondition = self.nreflections + 2
+
         self.l = float(l)
         self.L = float(L)
         self.h = float(h)
 
-        self.leftwall = Plane(Point(-l/2., 0, 0), RIGHT, label = 'left wall')
-        self.rightwall = Plane(Point(l/2., 0, 0), LEFT, label = 'right wall')
-        self.backwall = Plane(Point(0, -L/2., 0), FRONT, label = 'back wall')
-        self.frontwall = Plane(Point(0., L/2., 0), BACK, label = 'front wall')
-        self.floor = Plane(Point(0, 0, 0), UP, label = 'floor')
-        self.ceiling = Plane(UP * h, DOWN, label = 'ceiling')
+        self.leftwall = Plane(Point(-l/2., 0, 0), RIGHT, label = 'left wall', model = modeldict)
+        self.rightwall = Plane(Point(l/2., 0, 0), LEFT, label = 'right wall', model = modeldict)
+        self.backwall = Plane(Point(0, -L/2., 0), FRONT, label = 'back wall', model = modeldict)
+        self.frontwall = Plane(Point(0., L/2., 0), BACK, label = 'front wall', model = modeldict)
+        self.floor = Plane(Point(0, 0, 0), UP, label = 'floor', model = modeldict)
+        self.ceiling = Plane(UP * h, DOWN, label = 'ceiling', model = modeldict)
         
-        super(RoomScene,self).__init__(*[self.leftwall,self.rightwall,
+        super(RoomScene, self).__init__([self.leftwall,self.rightwall,
                                          self.backwall,self.frontwall,
-                                         self.floor, self.ceiling], **kwdargs)
+                                         self.floor, self.ceiling], stopcondition = stopcondition)
         
-    def get_beam(self, position, nrays = DEFAULT_NRAYS):
-        if isinstance(position, FloatTriplet):
-            position = position.array().reshape((3, 1))
-        elif isinstance(position, np.ndarray) & position.ndim == 1:
-            position = position.reshape((3, 1))
+    def get_beam(self, position, nrays = None, method = 'exact'):
+        if method == 'exact':
+            if isinstance(position, FloatTriplet):
+                position = position.array().reshape((3, 1))
+            elif isinstance(position, np.ndarray) & position.ndim == 1:
+                position = position.reshape((3, 1))
+        elif method == 'random':
+            return super(RoomScene, self).get_beam(position, nrays = nrays)
 
         nreflections = self.nreflections
         res = Beam(0)
