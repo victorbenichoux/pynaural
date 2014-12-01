@@ -466,10 +466,9 @@ class ImpulseResponse(np.ndarray):
             raise AttributeError('Can only apply to a sound or IR')
             
     def _apply(self, other, outlevel = None):
-
         if not self.binaural:
-            res = zeros((other.shape[0]+self.shape[0]-1, other.nchannels))
-            for chan in range(other.nchannels):
+            res = zeros((other.shape[0]+self.shape[0]-1, other.shape[1]))
+            for chan in range(other.shape[1]):
                 if self.is_delay:
                     delay_samples = np.nonzero(self.flatten())[0]
                     res[delay_samples:delay_samples+other.shape[0], chan] = other[:,chan].flatten()

@@ -178,21 +178,19 @@ class FloatTriplet(object):
     '''
     Simple class to hold 3d coordinates, only used as a superclass for Points and Vectors that should not in principle be confounded.
     '''
-    def __init__(self,*args):
-        if len(args) == 3:
-            self.x=np.float64(args[0])
-            self.y=np.float64(args[1])
-            self.z=np.float64(args[2])
-        elif len(args) == 1:
-            if len(args[0])==3:
-                self.x=args[0][0]
-                self.y=args[0][1]
-                self.z=args[0][2]
-            else:
-                raise ValueError()
+    def __init__(self, input):
+        if isinstance(input, FloatTriplet):
+            self.coords = np.array([input.x, input.y, input.z]).reshape((3,1))
+        elif len(input) == 3:
+            self.coords = np.array(input).reshape((3,1))
         else:
-            raise ValueError()
-        
+            raise TypeError
+        self.x = self.coords[0,0]
+        self.y = self.coords[1,0]
+        self.z = self.coords[2,0]
+
+
+
     def norm(self):
         return np.sqrt(self.x**2+self.y**2+self.z**2)
 
@@ -202,8 +200,11 @@ class FloatTriplet(object):
     def __repr__(self):
         return self.__str__()
 
+    def __len__(self):
+        return 3
+
     def array(self):
-        return np.array([self.x,self.y,self.z]).reshape((3,1))
+        return self.coords
 
     def tuple(self):
         return (self.x, self.y, self.z)
@@ -239,7 +240,7 @@ class Vector(FloatTriplet):
                 x=args[0]
                 y=args[1]
                 z=args[2]
-            super(Vector,self).__init__(*(x,y,z))
+            super(Vector,self).__init__([x,y,z])
         
         elif len(args)==2:
             if isinstance(args[0],Point) and isinstance(args[1],Point):
@@ -260,12 +261,14 @@ class Vector(FloatTriplet):
         else:
             return TypeError
 
-    def __sub__(self,other):
+    def __sub__(self, other):
         return self.__add__(-other)
 
-    def __mul__(self,other):
-        if type(other)==Vector:
+    def __mul__(self, other):
+        if type(other) == Vector:
             return self.x*other.x+self.y*other.y+self.z*other.z
+        elif isinstance(other, Rotation):
+            return other.__mul__(self)
         else:
             return Vector(self.x*other,self.y*other,self.z*other)
     
@@ -366,7 +369,7 @@ class AzimuthRotation(Rotation):
         
     def __mul__(self, other):
         if isinstance(other, Vector):
-            return self.value*other.array()
+            return Vector(self.value*other.array())
         elif type(other) in [float, int]:
             if self.unit == 'deg':
                 other = deg2rad(other)
@@ -435,16 +438,8 @@ class Point(FloatTriplet):
     '''
     Simple class to represent points
     '''
-    def __init__(self,*args):
-        if len(args)==1:
-            if type(args[0])==Vector or type(args[0]) == Point:
-                self.x=args[0].x
-                self.y=args[0].y
-                self.z=args[0].z
-            else:
-                super(Point,self).__init__(args[0])
-        else:
-            super(Point,self).__init__(*args)
+    def __init__(self, input):
+        super(Point,self).__init__(input)
 
     def __str__(self):
         return 'Point '+super(Point,self).__str__()
@@ -455,6 +450,6 @@ class Point(FloatTriplet):
         else:
             return TypeError
 
-ORIGIN=Point(0,0,0)
+ORIGIN=Point([0,0,0])
 
 

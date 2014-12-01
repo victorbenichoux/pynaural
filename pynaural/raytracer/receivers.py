@@ -101,16 +101,38 @@ class HRTFReceiver(OrientedReceiver):
         hrir = self.hrtfset.forcoordinates(idmin)
         return hrir
 
-    def collapse(self, irs):
-        data = np.zeros((self.nsamples + irs.nsamples - 1, 2))
-        ncoordinates = irs.ncoordinates
-        for k in xrange(ncoordinates):
-            az, el = irs.coordinates['azim'][k], irs.coordinates['elev'][k]
-            hrir = self.get_hrir(az, el)
-            cur_ir = irs.forcoordinates(k).apply(hrir)
-            data[:,0] += cur_ir[:,0].flatten()
-            data[:,1] += cur_ir[:,1].flatten()
-        return ImpulseResponse(data, binaural = True)
+    def collapse(self, irs, monaural = None):
+        '''
+        Apply the HRTF to irs resulting from applying a model to the paths rendered by a scene
+        By default applies left and right HRTF to all the rays. In the case where rays represent the path to one ear only, use monaural = 'left' or 'right' to apply the respective HRTFs
+
+        :param irs:
+        :param monaural: either None, 'left' or 'right'
+        :return: Binaural Impulse Response for the scene
+
+        '''
+        if monaural is None:
+            data = np.zeros((self.nsamples + irs.nsamples - 1, 2))
+            ncoordinates = irs.ncoordinates
+            for k in xrange(ncoordinates):
+                az, el = irs.coordinates['azim'][k], irs.coordinates['elev'][k]
+                hrir = self.get_hrir(az, el)
+                cur_ir = irs.forcoordinates(k).apply(hrir)
+                data[:,0] += cur_ir[:,0].flatten()
+                data[:,1] += cur_ir[:,1].flatten()
+            return ImpulseResponse(data, binaural = True)
+        else:
+            data = np.zeros((self.nsamples + irs.nsamples - 1, 1))
+            ncoordinates = irs.ncoordinates
+
+            for k in xrange(ncoordinates):
+                az, el = irs.coordinates['azim'][k], irs.coordinates['elev'][k]
+                hrir = self.get_hrir(az, el)
+                print hrir.__getattribute__(monaural).shape
+                curhrir = hrir.__getattribute__(monaural)
+                cur_ir = irs.forcoordinates(k)._apply(curhrir)
+                data[:,0] += cur_ir.flatten()
+            return ImpulseResponse(data, binaural = False)
 
     def computeHRIRs(self, *args, **kwdargs):
         '''

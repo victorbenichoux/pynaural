@@ -101,35 +101,6 @@ def powerlawnoise(nsamples, alpha, samplerate, nchannels=1,normalise=False):
 
     return x[:nsamples,:]
 
-def loadwave(filename):
-    '''
-    Load the file given by filename and returns a Sound object. 
-    Sound file can be either a .wav or a .aif file.
-    '''
-    ext = filename.split('.')[-1].lower()
-    if ext == 'wav':
-        import wave as sndmodule
-    elif ext == 'aif' or ext == 'aiff':
-        import aifc as sndmodule
-    else:
-        raise NotImplementedError('Can only load aif or wav soundfiles')
-    wav = sndmodule.open(filename, "r")
-    nchannels, sampwidth, framerate, nframes, comptype, compname = wav.getparams()
-    frames = wav.readframes(nframes * nchannels)
-    typecode = {2:'h', 1:'B'}[sampwidth]
-    out = np.frombuffer(frames, dtype=np.dtype(typecode))
-    scale = {2:2 ** 15, 1:2 ** 7-1}[sampwidth]
-    meanval = {2:0, 1:2**7}[sampwidth]
-
-    data = np.zeros((nframes, nchannels))
-    for i in range(nchannels):
-        data[:, i] = out[i::nchannels]
-        data[:, i] /= scale
-        data[:, i] -= meanval
-        
-#    print nchannels, sampwidth, framerate
-#    print out.dtype
-    return data, framerate
 
 def load_word(wordnumber):
     wordlist = ['aunt', 'badge', 'freeze', 'quest', 'wine', 'wound']
