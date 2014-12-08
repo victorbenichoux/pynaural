@@ -4,7 +4,7 @@ import numpy as np
 __all__ = ['c', 'spherical_ref_factor', 'atm_abs']
 
 ## Constants
-c=342#*meter/second #sound speed
+c=342.#*meter/second #sound speed
 T0=293.15#*kelvin #ref temperature (20C)
 hr0=0.5 # ref hygrometry
 To1=273.16#*kelvin # triple point temperature

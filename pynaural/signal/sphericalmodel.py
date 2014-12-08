@@ -1,12 +1,11 @@
-
-from pynaural.raytracer.geometry import *
-from pynaural.raytracer.acoustics import c # speed of sound
+#from pynaural.raytracer.acoustics import c # speed of sound
 from pynaural.signal.impulseresponse import ImpulseResponse, TransferFunction
 
 from brian import *
 from numpy.fft import fft, ifft
 
 MAX_ITER = 1e7
+c=342.
 
 class SphericalHead(object):
     '''
