@@ -12,7 +12,6 @@ try:
 except:
     has_brian = False
 
-from pynaural.raytracer.geometry.base import *
 from pynaural.signal.misc import *
 from pynaural.signal.smoothing import *
 from pynaural.utils.spatprefs import get_pref
