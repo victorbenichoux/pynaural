@@ -1,8 +1,5 @@
 '''
 Some fitting routines that can be useful
-
-Also, the bootstraping is in here.
-
 '''
 from scipy.optimize import leastsq, fmin
 from scipy.stats import linregress

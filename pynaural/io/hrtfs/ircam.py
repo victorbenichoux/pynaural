@@ -4,7 +4,7 @@ import numpy as np
 from glob import glob
 import re, os
 
-from pynaural.signal.impulseresponse import ImpulseResponse
+import pynaural.signal.impulseresponse
 from pynaural.utils.spatprefs import get_pref
 
 __all__ = ['ircamHRIR', 'az_spat2ircam', 'az_ircam2spat']
@@ -98,7 +98,7 @@ def ircamHRIR(subject, coordsfilter = None, path = None, compensated = False):
         newdata[:, :data.shape[1]] = data[0,:,:].transpose()
         newdata[:, data.shape[1]:] = data[1,:,:].transpose()
         
-        hrir = ImpulseResponse(newdata, 
+        hrir = pynaural.signal.impulseresponse.ImpulseResponse(newdata,
                                coordinates = newcoords, 
                                binaural = True, 
                                samplerate = samplerate)

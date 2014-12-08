@@ -1,7 +1,7 @@
 from pynaural.raytracer.geometry.rays import SphericalBeam, Beam
 from pynaural.raytracer.geometry.base import Point, Vector, FRONT, BACK, LEFT, RIGHT, UP, DOWN, ORIGIN, \
     cartesian2spherical
-from pynaural.signal.impulseresponse import ImpulseResponse, _makecoordinates, zerosIR
+import pynaural.signal.impulseresponse
 from pynaural.signal.sphericalmodel import SphericalHead
 from pynaural.utils.spatprefs import get_pref
 from pynaural.utils.debugtools import log_debug
@@ -120,7 +120,7 @@ class HRTFReceiver(OrientedReceiver):
                 cur_ir = irs.forcoordinates(k).apply(hrir)
                 data[:,0] += cur_ir[:,0].flatten()
                 data[:,1] += cur_ir[:,1].flatten()
-            return ImpulseResponse(data, binaural = True)
+            return pynaural.signal.impulseresponse.ImpulseResponse(data, binaural = True)
         else:
             data = np.zeros((self.nsamples + irs.nsamples - 1, 1))
             ncoordinates = irs.ncoordinates
@@ -132,7 +132,7 @@ class HRTFReceiver(OrientedReceiver):
                 curhrir = hrir.__getattribute__(monaural)
                 cur_ir = irs.forcoordinates(k)._apply(curhrir)
                 data[:,0] += cur_ir.flatten()
-            return ImpulseResponse(data, binaural = False)
+            return pynaural.signal.impulseresponse.ImpulseResponse(data, binaural = False)
 
     def computeHRIRs(self, *args, **kwdargs):
         '''
@@ -173,7 +173,7 @@ class HRTFReceiver(OrientedReceiver):
                 target_source[i] = beam.target_source[i]
 
             log_debug('Finished fetching HRTFs')
-            HRIRs = ImpulseResponse(data,
+            HRIRs = pynaural.signal.impulseresponse.ImpulseResponse(data,
                 samplerate = self.samplerate,
                 binaural = True,
                 coordinates = coordinates,
@@ -183,7 +183,7 @@ class HRTFReceiver(OrientedReceiver):
             coords = args[0]
             # TODO
             # do something better and move it somewhere else
-            coordinates = _makecoordinates(coords, binaural = True)
+            coordinates = pynaural.signal.impulseresponse._makecoordinates(coords, binaural = True)
             leftdata = np.zeros((len(self.hrtfset[0].left),
                                   len(coords)))
             rightdata = np.zeros((len(self.hrtfset[0].right),
@@ -194,7 +194,7 @@ class HRTFReceiver(OrientedReceiver):
                 rightdata[:,i] = self.hrtfset.get_hrir(az, el, method =
                                                        method).right.flatten()
             data = np.hstack((leftdata, rightdata))
-            HRIRs = ImpulseResponse(data,
+            HRIRs = pynaural.signal.impulseresponse.ImpulseResponse(data,
                                     samplerate = self.samplerate,
                                     binaural = True,
                                     coordinates = coordinates)
@@ -270,7 +270,7 @@ class HRTFReceiver(OrientedReceiver):
         if scene.nsources > 1:
             # More than one source
             # TODO 
-            allhrirs = zerosIR((res.shape[0], 2*scene.nsources), binaural = True)
+            allhrirs = pynaural.signal.impulseresponse.zerosIR((res.shape[0], 2*scene.nsources), binaural = True)
             relativecoordinates = []
             target_source = np.unique(HRIRs.target_source)
             for i in range(scene.nsources):
@@ -292,7 +292,7 @@ class HRTFReceiver(OrientedReceiver):
                     left.reshape((len(left),1)), right.reshape((len(right), 1))
                                                                ))
             coordinates = scene.sources[0].getRelativeSphericalCoords(self)
-            return ImpulseResponse(data, 
+            return pynaural.signal.impulseresponse.ImpulseResponse(data,
                                    binaural = True,
                                    samplerate = HRIRs.samplerate,
                                    target_source = scene.sources[0].get_id(), coordinates = coordinates[1:])

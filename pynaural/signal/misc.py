@@ -1,9 +1,12 @@
 import numpy as np
+from brian import Quantity
 from scipy.signal import *
 from numpy.fft import *
 from ..utils import *
 from brian.hears.db import dB
+from brian.stdunits import Hz
 from brian.hears.sounds import whitenoise, Sound
+from brian.hears import Gammatone, Repeat
 import scipy as sp
 
 
@@ -52,7 +55,7 @@ def fftconvolve(x, h):
 def fftxcorr(x, h):
     '''
     Uses FFT to do a cross correlation.
-    It is equivalent to the function correlate from scipy except it uses FFTs (so it's faster).
+    It is equivalent to the function correlate from sp except it uses FFTs (so it's faster).
     '''
     x = x.flatten()
     h = h.flatten()
@@ -65,6 +68,8 @@ def fftxcorr(x, h):
     hft = fft(h)
     res = fftshift(ifft(xft*np.conj(hft)))
     mid = len(res)/2
+
+
     return res[mid - max(Nx, Nh) + 1:mid + max(Nx, Nh)].real
 
 ## Overlap-and-add filtering
@@ -105,11 +110,11 @@ def dB_SPL(x):
     '''
     return 20.0*np.log10(rms(x)/2e-5)*dB
 
-def rms(x):
+def rms(x, axis = 0):
     '''
     Returns the RMS value of the array given as argument
     '''
-    return np.sqrt(np.mean((np.asarray(x)-np.mean(np.asarray(x), axis = 0))**2, axis = 0))
+    return np.sqrt(np.mean((np.asarray(x)-np.mean(np.asarray(x), axis = axis))**2, axis = axis))
 
 ## padding utils functions for FFT
 
@@ -168,15 +173,129 @@ def gammatone_correlate(hrir, samplerate, cf, return_times = False):
     if not isinstance(hrir, Sound):
         hrir = Sound(hrir, samplerate = samplerate)
     
-    fb = Gammatone(Repeat(hrir, len(cf)), hstack((cf, cf)))
+    fb = Gammatone(Repeat(hrir, len(cf)), np.hstack((cf, cf)))
     filtered_hrirset = fb.process()
-    res = np.zeros((hrir.shape[0]*2, len(cf)))
+    res = np.zeros((hrir.shape[0]*2-1, len(cf)))
     for i in range(len(cf)):
         left = filtered_hrirset[:, i]
         right = filtered_hrirset[:, i+len(cf)]
-        times, res[:,i] = fftxcorr(left, right, hrir.samplerate)
+        res[:,i] = fftxcorr(left, right)
     if return_times:
+        times = (np.arange(len(left)+len(right))+1-len(left))/hrir.samplerate
         return times, res
     else: 
         return res
 
+def gammatone_coherence(hrir, samplerate, cf, tcut = 1e-3):
+    '''
+    returns the coherence of hrir per band in gammatone filters
+    '''
+    hrir = hrir.squeeze()
+    ## commented due to some playdoh things
+    # if (hrir[:,0] == hrir[:,1]).all():
+    #     return (zeros(len(cf)),zeros(len(cf)))
+    # if (abs(hrir[:,0])<= 10e-6).all() or  (abs(hrir[:,1])<=10e-6).all():
+    #     log_debug('Blank hrirs detected, output will be weird')
+#
+
+    if not isinstance(hrir, Sound):
+        if isinstance(samplerate, Quantity):
+            hrir = Sound(hrir, samplerate = samplerate)
+        else:
+            hrir = Sound(hrir, samplerate = samplerate*Hz)
+
+    fb = Gammatone(Repeat(hrir, len(cf)), np.hstack((cf, cf)))
+    filtered_hrirset = fb.process()
+    res = np.zeros(len(cf))
+    for i in range(len(cf)):
+        left = filtered_hrirset[:, i]
+        right = filtered_hrirset[:, i+len(cf)]
+        times = (np.arange(len(left)+len(right)-1)+1-len(left))/hrir.samplerate
+        xcorr = fftxcorr(left, right)
+        res[i] = np.max(xcorr[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
+    return res
+
+def broadband_coherence(hrir, samplerate, tcut = 1e-3):
+    '''
+    returns the coherence of hrir per band in gammatone filters
+    '''
+    hrir = hrir.squeeze()
+    ## commented due to some playdoh things
+    # if (hrir[:,0] == hrir[:,1]).all():
+    #     return (zeros(len(cf)),zeros(len(cf)))
+    # if (abs(hrir[:,0])<= 10e-6).all() or  (abs(hrir[:,1])<=10e-6).all():
+    #     log_debug('Blank hrirs detected, output will be weird')
+#
+
+    if not isinstance(hrir, Sound):
+        if isinstance(samplerate, Quantity):
+            hrir = Sound(hrir, samplerate = samplerate)
+        else:
+            hrir = Sound(hrir, samplerate = samplerate*Hz)
+
+
+    left = hrir.left
+    right = hrir.right
+    xcorr = np.abs(fftxcorr(left, right))
+
+    times = (np.arange(len(left)+len(right)-1)+1-len(left))/hrir.samplerate
+
+    return np.max(xcorr[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
+
+def octaveband_filterbank(sound, cfs, samplerate, fraction = 1./3, butter_order = 3):
+    '''
+    passes the input sound through a bank of butterworth filters with fractional octave bandwidths
+    :param sound:
+    :param cfs:
+    :param samplerate:
+    :param fraction:
+    :param butter_order:
+    :return:
+    '''
+    res = np.zeros((len(sound), len(cfs)))
+
+    for kcf, cf in enumerate(cfs):
+        fU = 2**((fraction/2.))*cf
+        fL = .5**((fraction/2.))*cf
+        fU_norm = fU / (samplerate/2)
+        fL_norm = fL / (samplerate/2)
+        b, a = sp.signal.butter(butter_order, (fL_norm, fU_norm), 'band')
+        res[:,kcf] = sp.signal.filtfilt(b,a,sound.flatten())
+
+    return res
+
+def octaveband_coherence(hrir, samplerate, cfs, tcut = 1e-3, butter_order = 3, fraction = 1./3, return_envelope = False):
+    '''
+
+    :param hrir:
+    :param samplerate:
+    :param cf:
+    :param tcut:
+    :param butter_order:
+    :param fraction:
+    :return:
+    '''
+    hrir = hrir.squeeze()
+    if not isinstance(hrir, Sound):
+        if isinstance(samplerate, Quantity):
+            hrir = Sound(hrir, samplerate = samplerate)
+        else:
+            hrir = Sound(hrir, samplerate = samplerate*Hz)
+
+    filtered_left = octaveband_filterbank(hrir[:,0], cfs, hrir.samplerate, fraction = fraction, butter_order = butter_order)
+    filtered_right = octaveband_filterbank(hrir[:,1], cfs, hrir.samplerate, fraction = fraction, butter_order = butter_order)
+
+    res = np.zeros(len(cfs))
+    res_env = np.zeros(len(cfs))
+    for i in range(len(cfs)):
+        left = filtered_left[:, i]
+        right = filtered_right[:, i]
+        times = (np.arange(len(left)+len(right)-1)+1-len(left))/hrir.samplerate
+        xcorr = fftxcorr(left, right)
+        res_env[i] = np.max(np.abs(sp.signal.hilbert(xcorr))[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
+
+        res[i] = np.max(xcorr[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
+    if return_envelope:
+        return res, res_env
+    else:
+        return res

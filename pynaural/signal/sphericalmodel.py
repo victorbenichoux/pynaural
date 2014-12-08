@@ -1,7 +1,7 @@
 
 from pynaural.raytracer.geometry import *
 from pynaural.raytracer.acoustics import c # speed of sound
-from pynaural.signal.impulseresponse import ImpulseResponse, TransferFunction
+import pynaural.signal.impulseresponse
 
 from brian import *
 from numpy.fft import fft, ifft
@@ -94,7 +94,7 @@ class SphericalHead(object):
 
         both = np.hstack((left.reshape((nfft, 1)), right.reshape((nfft, 1))))
 
-        tf = TransferFunction(both, 
+        tf = pynaural.signal.impulseresponse.TransferFunction(both,
                               samplerate = self.samplerate,  
                               binaural = True,
                               coordinates = (az, el))
@@ -119,7 +119,7 @@ class SphericalHead(object):
         coords['azim'] = azs
         coords['elev'] = np.ones(len(azs)) * el
 
-        tf = TransferFunction(data, 
+        tf = pynaural.signal.impulseresponse.TransferFunction(data,
                               samplerate = self.samplerate,  
                               binaural = True,
                               coordinates = coords)
@@ -150,7 +150,7 @@ class SphericalHead(object):
         
         ir = 0.5*(2*ir+irp+irm)
         
-        return ImpulseResponse(ir, **h.get_kwdargs())
+        return pynaural.signal.impulseresponse.ImpulseResponse(ir, **h.get_kwdargs())
         
     def _get_single_tf(self, az, el, distance = 2*meter, 
                        ear = 'left', 
@@ -172,7 +172,7 @@ class SphericalHead(object):
         # frequencies
         f = fftfreq(nfft)*self.samplerate
         
-        f[f<0] = -f[f<0]
+        f[f < 0] = -f[f < 0]
         
         a = float(self.a)
         r = float(distance)
@@ -224,7 +224,7 @@ class SphericalHead(object):
         testf = fftfreq(nfft)
         H[testf>0] = conj(H[testf>0])
         
-        return TransferFunction(H, 
+        return pynaural.signal.impulseresponse.TransferFunction(H,
                                 samplerate=self.samplerate,
                                 coordinates=(az, el))
     

@@ -3,7 +3,7 @@ This is a new class designed to replace the old Model paradigm that is getting m
 '''
 from pynaural.raytracer import cartesian2spherical
 from pynaural.raytracer.acoustics import spherical_ref_factor
-from pynaural.signal.impulseresponse import TransferFunction, ImpulseResponse
+import pynaural.signal.impulseresponse
 import numpy as np
 
 from matplotlib.pyplot import *
@@ -19,7 +19,7 @@ class NaturalGroundModel(object):
     def apply(self, in_beam):
         beam = in_beam[in_beam.get_reachedsource()]
         # first check that the beam is consistent with a situation with only a ground
-        if not (beam.depth == 3 and beam.nrays % 2 == 0):
+        if not (beam.depth == 2 and beam.nrays % 2 == 0):
             raise ValueError("NaturalGroundModel can only be used with scenes with only a ground")
 
         nsources = beam.nrays / 2
@@ -62,7 +62,7 @@ class NaturalGroundModel(object):
         # plot(ir_data_final)
         # show()
 
-        return ImpulseResponse(ir_data,
+        return pynaural.signal.impulseresponse.ImpulseResponse(ir_data,
                                 samplerate = self.samplerate,
                                 coordinates = coordinates)
 
@@ -120,7 +120,7 @@ class DelayAttenuationModel(object):
         coordinates['azim'] = beam_coordinates[1]
         coordinates['elev'] = beam_coordinates[2]
 
-        return ImpulseResponse(data_ir,
+        return pynaural.signal.impulseresponse.ImpulseResponse(data_ir,
                                 samplerate = self.samplerate,
                                 coordinates = coordinates, is_delay = True)
 
