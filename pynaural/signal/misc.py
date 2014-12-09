@@ -163,12 +163,6 @@ def gammatone_correlate(hrir, samplerate, cf, return_times = False):
     returns the correlograms of hrir per band
     '''
     hrir = hrir.squeeze()
-    ## commented due to some playdoh things
-    # if (hrir[:,0] == hrir[:,1]).all():
-    #     return (zeros(len(cf)),zeros(len(cf)))
-    # if (abs(hrir[:,0])<= 10e-6).all() or  (abs(hrir[:,1])<=10e-6).all():
-    #     log_debug('Blank hrirs detected, output will be weird')
-#
         
     if not isinstance(hrir, Sound):
         hrir = Sound(hrir, samplerate = samplerate)
@@ -191,12 +185,6 @@ def gammatone_coherence(hrir, samplerate, cf, tcut = 1e-3):
     returns the coherence of hrir per band in gammatone filters
     '''
     hrir = hrir.squeeze()
-    ## commented due to some playdoh things
-    # if (hrir[:,0] == hrir[:,1]).all():
-    #     return (zeros(len(cf)),zeros(len(cf)))
-    # if (abs(hrir[:,0])<= 10e-6).all() or  (abs(hrir[:,1])<=10e-6).all():
-    #     log_debug('Blank hrirs detected, output will be weird')
-#
 
     if not isinstance(hrir, Sound):
         if isinstance(samplerate, Quantity):
@@ -220,12 +208,6 @@ def broadband_coherence(hrir, samplerate, tcut = 1e-3):
     returns the coherence of hrir per band in gammatone filters
     '''
     hrir = hrir.squeeze()
-    ## commented due to some playdoh things
-    # if (hrir[:,0] == hrir[:,1]).all():
-    #     return (zeros(len(cf)),zeros(len(cf)))
-    # if (abs(hrir[:,0])<= 10e-6).all() or  (abs(hrir[:,1])<=10e-6).all():
-    #     log_debug('Blank hrirs detected, output will be weird')
-#
 
     if not isinstance(hrir, Sound):
         if isinstance(samplerate, Quantity):
@@ -263,6 +245,7 @@ def octaveband_filterbank(sound, cfs, samplerate, fraction = 1./3, butter_order 
         res[:,kcf] = sp.signal.filtfilt(b,a,sound.flatten())
 
     return res
+from matplotlib.pyplot import *
 
 def octaveband_coherence(hrir, samplerate, cfs, tcut = 1e-3, butter_order = 3, fraction = 1./3, return_envelope = False):
     '''
@@ -286,15 +269,35 @@ def octaveband_coherence(hrir, samplerate, cfs, tcut = 1e-3, butter_order = 3, f
     filtered_right = octaveband_filterbank(hrir[:,1], cfs, hrir.samplerate, fraction = fraction, butter_order = butter_order)
 
     res = np.zeros(len(cfs))
-    res_env = np.zeros(len(cfs))
+
+    if return_envelope:
+        res_env = np.zeros(len(cfs))
+
     for i in range(len(cfs)):
         left = filtered_left[:, i]
         right = filtered_right[:, i]
         times = (np.arange(len(left)+len(right)-1)+1-len(left))/hrir.samplerate
         xcorr = fftxcorr(left, right)
-        res_env[i] = np.max(np.abs(sp.signal.hilbert(xcorr))[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
-
         res[i] = np.max(xcorr[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
+
+        if return_envelope:
+            left_env = np.abs(sp.signal.hilbert(left))
+            right_env = np.abs(sp.signal.hilbert(right))
+            xcorr_env = fftxcorr(left_env, right_env)
+            res_env[i] = np.max(xcorr_env[np.abs(times) < tcut])/(rms(left_env)*rms(right_env)*len(right_env))
+
+        if False:
+            clf()
+            subplot(211)
+            plot(left, 'b-')
+            plot(left_env, 'b--')
+            plot(right, 'g-')
+            plot(right_env, 'g--')
+            subplot(212)
+            plot(fftxcorr(left_env, right_env), 'b--')
+            plot(xcorr, 'k')
+            show()
+
     if return_envelope:
         return res, res_env
     else:

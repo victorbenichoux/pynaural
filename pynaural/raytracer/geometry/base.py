@@ -1,5 +1,4 @@
 import numpy as np
-from brian.units import *
 
 __all__=[
     'Vector','Point',

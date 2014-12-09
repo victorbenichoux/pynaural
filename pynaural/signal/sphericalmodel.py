@@ -1,12 +1,14 @@
+from pynaural.raytracer.geometry.base import degAz, degEl, FRONT
+from numpy.fft import fft, ifft, fftfreq
+import pynaural
+import numpy as np
 
-from pynaural.raytracer.geometry import *
-from pynaural.raytracer.acoustics import c # speed of sound
-import pynaural.signal.impulseresponse
-
-from brian import *
-from numpy.fft import fft, ifft
+__all__ = ['SphericalHead']
 
 MAX_ITER = 1e7
+c = 342.
+
+
 
 class SphericalHead(object):
     '''
@@ -45,7 +47,7 @@ class SphericalHead(object):
     
     '''
     def __init__(self, iad, earpos,
-                 nfft = 1024, samplerate = 44100.*Hz):
+                 nfft = 1024, samplerate = 44100.):
         
         if isinstance(earpos, tuple):
             earelevation, earazimuth = earpos
@@ -142,17 +144,17 @@ class SphericalHead(object):
 
         pre_delay = kwdargs.get('pre_delay', 64)
 
-        ir = ifft(asarray(h), axis = 0).real
-        ir = roll(ir, pre_delay, axis = 0)
+        ir = ifft(np.asarray(h), axis = 0).real
+        ir = np.roll(ir, pre_delay, axis = 0)
         
-        irp = vstack((zeros((1,2)), ir[:-1,:]))
-        irm = vstack((ir[1:,:], zeros((1,2))))
+        irp = np.vstack((np.zeros((1,2)), ir[:-1,:]))
+        irm = np.vstack((ir[1:,:], np.zeros((1,2))))
         
         ir = 0.5*(2*ir+irp+irm)
         
         return pynaural.signal.impulseresponse.ImpulseResponse(ir, **h.get_kwdargs())
         
-    def _get_single_tf(self, az, el, distance = 2*meter, 
+    def _get_single_tf(self, az, el, distance = 2.,
                        ear = 'left', 
                        pre_delay = None,
                        nfft = None, samplerate = None, threshold = 1e-15):
@@ -177,7 +179,7 @@ class SphericalHead(object):
         a = float(self.a)
         r = float(distance)
 
-        mu = (2 * pi * f * a) / c
+        mu = (2 * np.pi * f * a) / c
         rho = r / a
         zr = 1. / (1j * mu * rho)
         za = 1. / (1j * mu)
@@ -196,7 +198,7 @@ class SphericalHead(object):
         newratio = abs(term)/abs(sum)
         m = 2.
         
-        condition = ones(f.shape, dtype = bool)
+        condition = np.ones(f.shape, dtype = bool)
         
         while condition.any():
             if m> MAX_ITER:
@@ -217,12 +219,12 @@ class SphericalHead(object):
             oldratio = newratio
             newratio = abs(term)/abs(sum)
             condition = (oldratio > threshold) + (newratio > threshold)
-        H = (rho * exp(- 1j * mu) * sum) / (1j * mu)
+        H = (rho * np.exp(- 1j * mu) * sum) / (1j * mu)
 
-        H[isnan(H)] = 0
+        H[np.isnan(H)] = 0
         
         testf = fftfreq(nfft)
-        H[testf>0] = conj(H[testf>0])
+        H[testf>0] = np.conj(H[testf>0])
         
         return pynaural.signal.impulseresponse.TransferFunction(H,
                                 samplerate=self.samplerate,
@@ -253,7 +255,7 @@ class SphericalHead(object):
         '''
         The normalized frequency defined as 2 * pi * f * a / c
         '''
-        f = linspace(0, 1, self.nfft) * self.samplerate
+        f = np.linspace(0, 1, self.nfft) * self.samplerate
         return 2 * np.pi * f * self.a / c
     
     @property
@@ -261,5 +263,5 @@ class SphericalHead(object):
         '''
         The normalized times defined as 2 * pi * t * c / a
         '''
-        t = linspace(0, 1, self.nfft) / self.samplerate
+        t = np.linspace(0, 1, self.nfft) / self.samplerate
         return 2 * np.pi * t * c / self.a
