@@ -1,11 +1,9 @@
 import scipy
-import numpy as np
 from matplotlib.pyplot import *
 from pynaural.signal.misc import my_logspace, octaveband_filterbank
 
 samplerate = 44100.
 cfs = my_logspace(350, 2000, 16)
-
 
 fraction = 1/3.
 
@@ -24,8 +22,6 @@ for kcf, cf in enumerate(cfs):
     fL_norm = fL / (samplerate/2)
     b, a = scipy.signal.butter(butter_order, (fL_norm, fU_norm), 'band')
     res[:,kcf] = scipy.signal.lfilter(b,a,signal)
-
-print (res0==res).all()
 
 print np.max(np.abs(res0-res))
 figure()

@@ -242,7 +242,7 @@ def octaveband_filterbank(sound, cfs, samplerate, fraction = 1./3, butter_order 
         fU_norm = fU / (samplerate/2)
         fL_norm = fL / (samplerate/2)
         b, a = sp.signal.butter(butter_order, (fL_norm, fU_norm), 'band')
-        res[:,kcf] = sp.signal.filtfilt(b,a,sound.flatten())
+        res[:,kcf] = sp.signal.lfilter(b,a,sound.flatten())
 
     return res
 from matplotlib.pyplot import *
@@ -285,6 +285,16 @@ def octaveband_coherence(hrir, samplerate, cfs, tcut = 1e-3, butter_order = 3, f
             right_env = np.abs(sp.signal.hilbert(right))
             xcorr_env = fftxcorr(left_env, right_env)
             res_env[i] = np.max(xcorr_env[np.abs(times) < tcut])/(rms(left_env)*rms(right_env)*len(right_env))
+            if res_env[i]>1:
+                subplot(311)
+                plot(left)
+                plot(left_env)
+                subplot(312)
+                plot(right)
+                plot(right_env)
+                subplot(313)
+                plot(xcorr_env)
+                draw()
 
         if False:
             clf()

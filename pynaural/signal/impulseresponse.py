@@ -4,18 +4,11 @@ import matplotlib.cm as cmap
 from scipy.signal import *
 from scipy.io import loadmat
 import numpy as np
-
-try:
-    from brian import *
-    from brian.hears import *
-    has_brian = True
-except:
-    has_brian = False
-
 from pynaural.signal.misc import *
-from pynaural.signal.smoothing import *
+from pynaural.signal.smoothing import apply_windowing, nonuniform_spectralsmoothing
 from pynaural.utils.spatprefs import get_pref
 from pynaural.utils.debugtools import log_debug
+from pynaural.io.sounds.sounds import Sound, pinknoise
 
 
 __all__ = ['ImpulseResponse', 'TransferFunction',
@@ -54,7 +47,6 @@ class ImpulseResponse(np.ndarray):
     Is used in the binaural cues module to compute itds/ilds
     
     '''
-#    @check_units(samplerate=Hz, duration=second)
     def __new__(cls, data, 
                 samplerate = None,  # major attributes
                 binaural = False, # binaural flag
@@ -71,9 +63,8 @@ class ImpulseResponse(np.ndarray):
             return ImpulseResponse(data_ift, **kwdargs)
         if isinstance(data, np.ndarray):
             if samplerate is None:
-                samplerate = 44100.*Hz
-                #samplerate = prefs.get_pref('DEFAULT_SAMPLERATE', default = 44100.)*Hz
-            x = array(data, dtype = float)
+                samplerate = get_pref('DEFAULT_SAMPLERATE', default = 44100.)
+            x = np.array(data, dtype = float)
         else:
             print cls, data
             raise ValueError('Wrong Impulse Response initialization')
@@ -85,7 +76,7 @@ class ImpulseResponse(np.ndarray):
             target_source = np.array([target_source])
         x = x.view(cls)
         # minimum attributes
-        x.samplerate = ensure_Hz(samplerate)
+        x.samplerate = samplerate
         # flags for different types of IR
         x.binaural = binaural
         x.is_delay = is_delay
@@ -163,21 +154,21 @@ class ImpulseResponse(np.ndarray):
         if start<0:
             raise IndexError('Can only use positive indices in buffer.')
         samples = end-start
-        X = asarray(self)[start:end, :]
+        X = np.asarray(self)[start:end, :]
         if X.shape[0]<samples:
-            X = vstack((X, zeros((samples-X.shape[0], X.shape[1]))))
+            X = np.vstack((X, np.zeros((samples-X.shape[0], X.shape[1]))))
         return X
     
     ################## SLICING #######################
     def __getitem__(self, key):
-        return asarray(self).__getitem__(key)
+        return np.asarray(self).__getitem__(key)
     
     def __setitem__(self, key, val):
-        asarray(self).__setitem__(key, val)
+        np.asarray(self).__setitem__(key, val)
         
     def trim(self, *args):
         '''
-        Returns the same HRIR but trimmed between start and stop.
+        Returns the same HRIR but trimmed between start and stop. If start or stop are floats, they are interpreted as times.
         '''
         if len(args) == 2:
             start = args[0]
@@ -186,9 +177,9 @@ class ImpulseResponse(np.ndarray):
             start = 0
             end = args[0]
             
-        if units.have_same_dimensions(start, second):
+        if isinstance(start, float):
             start = dur2sample(start, self.samplerate)
-        if units.have_same_dimensions(end, second):
+        if isinstance(end, float):
             end = dur2sample(end, self.samplerate)
 
         data = self[start:end,:].copy()                
@@ -234,7 +225,7 @@ class ImpulseResponse(np.ndarray):
     def left(self):
         if not self.binaural:
             return self
-        data = asarray(self[:, :self.shape[1]/2])
+        data = np.asarray(self[:, :self.shape[1]/2])
         kwdargs = self.get_kwdargs(_slice = slice(None, self.shape[1]/2))
         kwdargs['binaural'] = False
         return ImpulseResponse(data, **kwdargs)
@@ -243,7 +234,7 @@ class ImpulseResponse(np.ndarray):
     def right(self):
         if not self.binaural:
             return self
-        data = asarray(self[:, self.shape[1]/2:])
+        data = np.asarray(self[:, self.shape[1]/2:])
         kwdargs = self.get_kwdargs(_slice = slice(self.shape[1]/2, None))
         kwdargs['binaural'] = False
         return ImpulseResponse(data, **kwdargs)
@@ -308,15 +299,15 @@ class ImpulseResponse(np.ndarray):
                 kwdargs['binaural'] = True
                 return ImpulseResponse(data, **kwdargs)
             else:
-                db.log_debug('No HRTF found matching condition')
+                log_debug('No HRTF found matching condition')
                 return None
             
         if len(args) == 2:
             azs = args[0]
             els = args[1]
-            if not iterable(azs):
+            if not hasattr(azs, '__iter__'):
                 azs = [azs]
-            if not iterable(els):
+            if not hasattr(els, '__iter__'):
                 els = [els]
             f = lambda azim, elev: azim in azs and elev in els
             return self.forcoordinates(f)
@@ -338,7 +329,6 @@ class ImpulseResponse(np.ndarray):
         if self._has_sources:
             return len(np.unique(self.target_source))
         else:
-#            db.log_debug('ImpulseResponse has no target_source, falling back, you should use .shape! or .ncoordinates')
             if self.binaural:
                 return self.shape[1]/2
             else:
@@ -380,14 +370,12 @@ class ImpulseResponse(np.ndarray):
         Downsamples the ImpulseResponse by a factor q (integer). Makes use of scipy.signal.decimate.
         
         '''
-        data = scipy.signal.decimate(self, q)[0,:,:]
+        data = sp.signal.decimate(self, q)[0,:,:]
         kwdargs = self.get_kwdargs()
         kwdargs['samplerate'] = kwdargs['samplerate']/q
         return ImpulseResponse(data, **kwdargs)
     
     def normalize(self, level = 1.):
-#        id_max = np.argmax(np.abs(self))
-#        value = asarray(self).reshape((self.shape[0]*self.shape[1],))[id_max]
         value = np.max(self)
         return self/value*level
 
@@ -415,7 +403,7 @@ class ImpulseResponse(np.ndarray):
                     soundfile += f
                 sound = Sound.load(soundfile).left
             if soundfile == -1 or sound.samplerate != self.samplerate:
-                sound = pinknoise(500*ms, samplerate = self.samplerate)
+                sound = pinknoise(0.5, samplerate = self.samplerate)
         else:
             if type(sound) == str:
                 sound = Sound.load(sound)
@@ -451,7 +439,7 @@ class ImpulseResponse(np.ndarray):
         if isinstance(other, Sound) or isinstance(other, ImpulseResponse):
             if not other.samplerate == self.samplerate:
                 if True:
-                    db.log_debug('Warning, samplerates not matching!')
+                    log_debug('Warning, samplerates not matching!')
                 else:
                     raise ValueError('Samplerates not matching')
             if self._has_coordinates and self.ncoordinates > 1:
@@ -466,7 +454,7 @@ class ImpulseResponse(np.ndarray):
             
     def _apply(self, other, outlevel = None):
         if not self.binaural:
-            res = zeros((other.shape[0]+self.shape[0]-1, other.shape[1]))
+            res = np.zeros((other.shape[0]+self.shape[0]-1, other.shape[1]))
             for chan in range(other.shape[1]):
                 if self.is_delay:
                     delay_samples = np.nonzero(self.flatten())[0]
@@ -475,14 +463,13 @@ class ImpulseResponse(np.ndarray):
                     res[:, chan] = fftconvolve(other[:,chan].flatten(), self)
             return Sound(res, samplerate = other.samplerate)
         else:
-            res = zeros((other.shape[0]+self.shape[0]-1, 2))
+            res = np.zeros((other.shape[0]+self.shape[0]-1, 2))
             if other.nchannels !=1:
-#                raise ValueError('Don\'t know what to do with 2 channel sound and binaural IR')
-                db.log_debug('Applying IR separately to each channel')
+                log_debug('Applying IR separately to each channel')
                 if self.is_delay:
-                    print "here0"
                     delay_samples = np.nonzero(self.flatten())[0]
-                    res[delay_samples:delay_samples+other.shape[0], chan] = other[:,chan].flatten()
+                    res[delay_samples:delay_samples+other.shape[0], 0] = other[:,0].flatten()
+                    res[delay_samples:delay_samples+other.shape[0], 1] = other[:,1].flatten()
                 else:
                     res[:,0] = fftconvolve(other.left.flatten(), self[:,0].flatten())
                     res[:,1] = fftconvolve(other.right.flatten(), self[:,1].flatten())
@@ -496,7 +483,7 @@ class ImpulseResponse(np.ndarray):
                 else:
                     res[:,0] = fftconvolve(other.flatten(), self[:,0].flatten())
                     res[:,1] = fftconvolve(other.flatten(), self[:,1].flatten())
-                if isinstance(outlevel, dB_type):
+                if outlevel:
                     rms_dB_left = dB_SPL(res[:,0])
                     rms_dB_right = dB_SPL(res[:,1])
                     gain_dB = min(outlevel-rms_dB_left, outlevel-rms_dB_right)
@@ -528,11 +515,8 @@ class ImpulseResponse(np.ndarray):
         
         # IR truncation?
         cutIR = cutIR or self.shape[0]
-        if isinstance(cutIR, Quantity):
-            if not units.have_same_dimensions(cutIR, second):
-                raise DimensionMismatchError('cutIR must be specified in samples or in seconds')
-            else:
-                cutIR = round(float(cutIR) * self.samplerate)
+        if isinstance(cutIR, float):
+            cutIR = round(float(cutIR) * self.samplerate)
 
         cutIR = min(float(cutIR), self.shape[0])
 
@@ -545,11 +529,11 @@ class ImpulseResponse(np.ndarray):
                 dataleft = conv(self[:cutIR, i])
                 dataright = conv(self[:cutIR, i + n])
                 subplot(211)
-                plot(arange(cutIR)*1000.0/float(self.samplerate), dataleft, label = label+' L')
+                plot(np.arange(cutIR)*1000.0/float(self.samplerate), dataleft, label = label+' L')
                 subplot(212)
-                plot(arange(cutIR)*1000.0/float(self.samplerate), dataright, label = label+' R')
+                plot(np.arange(cutIR)*1000.0/float(self.samplerate), dataright, label = label+' R')
             else:
-                plot(arange(cutIR)*1.0/float(self.samplerate), self[:cutIR,i], label = label)
+                plot(np.arange(cutIR)*1.0/float(self.samplerate), self[:cutIR,i], label = label)
 
         # axes labeling, legends
         if self.binaural:
@@ -663,12 +647,11 @@ class ImpulseResponse(np.ndarray):
         return np.arange(self.nsamples)/self.samplerate
 
     # acoustics related measures
-    def responsetime(self, criterion = 60*dB):
+    def responsetime(self, criterion = 60):
         '''
         Returns the response time, that is the time when the initial signal loses 60 dB.
         '''
-        if isinstance(criterion, dB_type):
-            criterion = 10**(-float(criterion)/20)
+        criterion = 10**(-float(criterion)/20)
         cumenergy = np.array(np.cumsum(self.normalize(), axis = 0)/self.samplerate)
         totalenergy =  cumenergy[-1, :]
         n = np.nonzero(cumenergy/totalenergy > criterion)[0][0]
@@ -763,12 +746,12 @@ class ImpulseResponse(np.ndarray):
 
     @staticmethod
     def delayIR(delay, shape, **kwdargs):
-        defaultsamplerate = prefs.get_pref('DEFAULT_SAMPLERATE', 
-                                           default = 44.1*kHz)
+        defaultsamplerate = get_pref('DEFAULT_SAMPLERATE',
+                                            default = 44100.)
         samplerate = kwdargs.get('samplerate', defaultsamplerate)
         kwdargs['is_delay'] = True
         res = zerosIR(shape, **kwdargs)
-        if isduration(delay):
+        if isinstance(delay, float):
             delay = dur2sample(delay, samplerate)
         if delay > res.shape[0]:
             raise ValueError('Delay too long for the duration of the IR')
@@ -813,7 +796,6 @@ class TransferFunction(np.ndarray):
     Is used in the binaural cues module to compute itds/ilds
     
     '''
-#    @check_units(samplerate=Hz, duration=second)
     def __new__(cls, data, 
                 nfft = None,
                 samplerate = None,  # major attributes
@@ -835,7 +817,7 @@ class TransferFunction(np.ndarray):
         if isinstance(data, np.ndarray):
             if samplerate is None:
                 samplerate = get_pref('DEFAULT_SAMPLERATE', default = 44100.)*Hz
-            x = array(data, dtype = complex)
+            x = np.array(data, dtype = complex)
         else:
             print cls, data
             raise ValueError('Wrong Transfer Function initialization')
@@ -918,7 +900,7 @@ class TransferFunction(np.ndarray):
     # - Fancy slicing with times is disabled for now, I may need to
     # rewrite the one in the Sound class, cause its a bit messy
     def __getitem__(self, key):
-        return asarray(self).__getitem__(key)
+        return np.asarray(self).__getitem__(key)
     
         # data = np.ndarray.__getitem__(self, key)
         # if type(key) == int and self.ndim>1:
@@ -941,14 +923,14 @@ class TransferFunction(np.ndarray):
         # return TransferFunction(data, **kwdargs)
     
     def __setitem__(self, key, val):
-        asarray(self).__setitem__(key, val)
+        np.asarray(self).__setitem__(key, val)
 
 ################## binaural stuff
     @property
     def left(self):
         if not self.binaural:
             return self
-        data = asarray(self[:, :self.shape[1]/2], dtype = complex)
+        data = np.asarray(self[:, :self.shape[1]/2], dtype = complex)
         kwdargs = self.get_kwdargs(_slice = slice(None, self.shape[1]/2))
         kwdargs['binaural'] = False
         return TransferFunction(data, **kwdargs)
@@ -957,7 +939,7 @@ class TransferFunction(np.ndarray):
     def right(self):
         if not self.binaural:
             return self
-        data = asarray(self[:, self.shape[1]/2:], dtype = complex)
+        data = np.asarray(self[:, self.shape[1]/2:], dtype = complex)
         kwdargs = self.get_kwdargs(_slice = slice(self.shape[1]/2, None))
         kwdargs['binaural'] = False
         return TransferFunction(data, **kwdargs)
@@ -983,7 +965,7 @@ class TransferFunction(np.ndarray):
         Should return an impulseResponse containing all the rays headed towards source args
         SPEC:
         value peut etre un int -> indexation
-        value peut etre une rotation? peut etre pas mal, mais bof NONONON
+        value peut etre une rotation?
         value peut etre un tuple (len=2) az, el
         value peut etre une condition: mieux!
         '''
@@ -1021,15 +1003,15 @@ class TransferFunction(np.ndarray):
                 kwdargs['binaural'] = True
                 return TransferFunction(data, **kwdargs)
             else:
-                db.log_debug('No HRTF found matching condition')
+                log_debug('No HRTF found matching condition')
                 return None
             
         if len(args) == 2:
             azs = args[0]
             els = args[1]
-            if not iterable(azs):
+            if not hasattr(els, '__iter__'):
                 azs = [azs]
-            if not iterable(els):
+            if not hasattr(els, '__iter__'):
                 els = [els]
             f = lambda azim, elev: azim in azs and elev in els
             return self.forcoordinates(f)
@@ -1074,9 +1056,8 @@ class TransferFunction(np.ndarray):
             else:
                 data = np.zeros((self.nsamples, 2))
                 data[:, 0] = self[:, k].flatten()
-                data[:, 1] = self[:,i + self.shape[1]/2].flatten()
+                data[:, 1] = self[:, k + self.shape[1]/2].flatten()
                 kwdargs = self.get_kwdargs(_slice = k)
-#                 kwdargs['binaural'] = self.binaural
                 return TransferFunction(data, **kwdargs)
 
     @property
@@ -1093,7 +1074,7 @@ class TransferFunction(np.ndarray):
         for k, id in enumerate(self.sources):
             chunk = self.forsource(id)
             #chunki = onesTF
-            if (np.sum(asarray(chunk.left), axis = 1) ==0).any():
+            if (np.sum(np.asarray(chunk.left), axis = 1) ==0).any():
                 print 'why?'
             res[:, k] = np.sum(chunk.left, axis = 1).flatten()
             if self.binaural:
@@ -1111,30 +1092,30 @@ class TransferFunction(np.ndarray):
         TDO: WRITE DOC
         '''
         if sound is None:
-            soundfile = prefs.get_pref('DEFAULT_SOUND', default = -1)
+            soundfile = get_pref('DEFAULT_SOUND', default = -1)
             if not soundfile == -1:
                 sound = Sound.load(soundfile)
             else:
-                sound = pinknoise(500*ms, samplerate = self.samplerate)
+                sound = pinknoise(0.5, samplerate = self.samplerate)
         else:
             if type(sound) == str:
                 sound = Sound.load(sound)
 
         if reference:
-            db.log_debug('Listening to original sound')
+            log_debug('Listening to original sound')
             sound.atlevel(60*dB).play(sleep = sleep)
 
         if self._has_coordinates:
             for i in range(self.ncoordinates):
                 out = self.forcoordinates(i).apply(sound)
-                db.log_debug('Listening to TF for coordinates '+str(self.coordinates[i]))
-                out.atlevel(60*dB).play(sleep = sleep)
+                log_debug('Listening to TF for coordinates '+str(self.coordinates[i]))
+                out.atlevel(60).play(sleep = sleep)
         else:
             out = self.apply(sound)
-            db.log_debug('Listening to TF')
-            out.atlevel(60*dB).play(sleep = sleep)
+            log_debug('Listening to TF')
+            out.atlevel(60).play(sleep = sleep)
 
-    def apply(self, other, outlevel = 60*dB):
+    def apply(self, other, outlevel = 60):
         '''
         Applies the current Impulse responses to a sound.
         Either yields a single sound in the case where the Impulse response is only relative to a single source. Otherwise outputs a list of sounds for each source.
@@ -1167,7 +1148,7 @@ class TransferFunction(np.ndarray):
             conv = lambda x: x
         
         offset = 0
-        if argmin(self) == 0:
+        if np.argmin(self) == 0:
             offset = 1
         subplot(211)
         semilogx(self.freqs[offset:], conv(self.amplitudes[offset:,:]), label = label)
@@ -1302,10 +1283,10 @@ class TransferFunction(np.ndarray):
 
     ##### TODO : check why repr and str don't work without this
     def __str__(self):
-        return asarray(self, dtype = complex).__str__()
+        return np.asarray(self, dtype = complex).__str__()
 
     def __repr__(self):
-        return asarray(self, dtype = complex).__repr__()
+        return np.asarray(self, dtype = complex).__repr__()
 
     # global properties
     @property
@@ -1363,7 +1344,7 @@ class TransferFunction(np.ndarray):
 
     @staticmethod
     def delayTF(*args, **kwdargs):
-        return TransferFunction(ir.delayIR(*args, **kwdargs))
+        return TransferFunction(delayIR(*args, **kwdargs))
     
     
     @staticmethod
@@ -1385,25 +1366,16 @@ binauralTF = TransferFunction.binauralTF
 ######################################## UTILS
 
 def dur2sample(duration, samplerate):
-    return int(rint(duration*samplerate))
+    return int(np.rint(duration*samplerate))
 
 def sample2dur(n, samplerate):
     return float(n)/samplerate
 
-def isduration(x):
-    return units.have_same_dimensions(x, second)
-
 def getnsample(x, samplerate):
-    if not (x is None) and isduration(x):
+    if not (x is None) and isinstance(x, float):
         return dur2sample(x, samplerate)
     else:
         return x
-
-def ensure_Hz(samplerate):
-    if units.is_dimensionless(samplerate):
-        return samplerate*Hz
-    else:
-        return samplerate
         
 
 ########### coordinates, target_source
@@ -1486,14 +1458,13 @@ def _shape_from_kwdargs(shape, kwdargs):
 
     shape = list(shape)
     if isinstance(shape[0], Quantity):
-        if not units.have_same_dimensions(shape[0], second):
-            raise DimensionMismatchError('Impulse response length must be specified in samples or seconds')
+        if not isinstance(shape[0], float):
+            raise ValueError('Impulse response length must be specified in samples or float (seconds)')
         else:
             try:
-                
-                samplerate = ensure_Hz(kwdargs['samplerate'])
+                samplerate = kwdargs['samplerate']
             except KeyError:
-                samplerate = prefs.get_pref('DEFAULT_SAMPLERATE', default = 44100*Hz)
+                samplerate = get_pref('DEFAULT_SAMPLERATE', default = 44100)
         shape[0] = round(shape[0] * samplerate)
     
     ###### dimension 1
@@ -1512,3 +1483,6 @@ def _shape_from_kwdargs(shape, kwdargs):
 
     shape = tuple(shape)
     return shape
+
+if __name__ == '__main__':
+    delayIR(10, 100)
