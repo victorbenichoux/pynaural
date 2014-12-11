@@ -1,21 +1,21 @@
-import os, re
-import warnings, pickle
+import pickle
 import matplotlib.cm as cmap
-from scipy.signal import *
-from scipy.io import loadmat
+from matplotlib.pyplot import *
 import numpy as np
-from pynaural.signal.misc import *
-from pynaural.signal.smoothing import apply_windowing, nonuniform_spectralsmoothing
+import scipy as sp
+from numpy.fft import fft, fftfreq, ifft
+from scipy.signal import decimate
+from pynaural.signal.misc import dB_SPL, fftconvolve, dBconv
+from pynaural.signal.smoothing import apply_windowing, nonuniform_spectralsmoothing, octaveband_smoothing
 from pynaural.utils.spatprefs import get_pref
 from pynaural.utils.debugtools import log_debug
-from pynaural.io.sounds.sounds import Sound, pinknoise
+from pynaural.signal.sounds import Sound, pinknoise
 
 
 __all__ = ['ImpulseResponse', 'TransferFunction',
            'onesIR', 'zerosIR', 'delayIR', 'binauralIR',
            'dur2sample', 'sample2dur', 'TransferFunction',
-           'onesTF', 'zerosTF', 'delayTF', 'binauralTF',
-           'zeropad']
+           'onesTF', 'zerosTF', 'delayTF', 'binauralTF']
 
 #####################################################################################################
 ########################################## Impulse Response #########################################
@@ -45,7 +45,6 @@ class ImpulseResponse(np.ndarray):
     ir.reorder_coordinates
 
     Is used in the binaural cues module to compute itds/ilds
-    
     '''
     def __new__(cls, data, 
                 samplerate = None,  # major attributes
@@ -410,7 +409,7 @@ class ImpulseResponse(np.ndarray):
 
         if reference:
             log_debug('Listening to original sound')
-            sound.atlevel(60*dB).play(sleep = sleep)
+            sound.atlevel(60).play(sleep = sleep)
 
         if self._has_coordinates:
             if self.binaural:
@@ -424,7 +423,7 @@ class ImpulseResponse(np.ndarray):
             
         out = self.apply(sound)
         out = Sound.sequence(out)
-        out.atlevel(60*dB).play(sleep = sleep)
+        out.atlevel(60).play(sleep = sleep)
         return out
         
 
@@ -728,7 +727,7 @@ class ImpulseResponse(np.ndarray):
 
         data = npzfile['data'][:, indices]        
         additional_info = npzfile['additional_info']
-        samplerate = float(additional_info[0])*Hz
+        samplerate = float(additional_info[0])
         binaural = bool(additional_info[1])
         
         res = ImpulseResponse(data, 
@@ -816,7 +815,7 @@ class TransferFunction(np.ndarray):
             return TransferFunction(data_ft, **kwdargs)
         if isinstance(data, np.ndarray):
             if samplerate is None:
-                samplerate = get_pref('DEFAULT_SAMPLERATE', default = 44100.)*Hz
+                samplerate = get_pref('DEFAULT_SAMPLERATE', default = 44100.)
             x = np.array(data, dtype = complex)
         else:
             print cls, data
@@ -1103,7 +1102,7 @@ class TransferFunction(np.ndarray):
 
         if reference:
             log_debug('Listening to original sound')
-            sound.atlevel(60*dB).play(sleep = sleep)
+            sound.atlevel(60).play(sleep = sleep)
 
         if self._has_coordinates:
             for i in range(self.ncoordinates):
@@ -1457,15 +1456,14 @@ def _shape_from_kwdargs(shape, kwdargs):
         shape = (shape, 1)
 
     shape = list(shape)
-    if isinstance(shape[0], Quantity):
-        if not isinstance(shape[0], float):
-            raise ValueError('Impulse response length must be specified in samples or float (seconds)')
-        else:
-            try:
-                samplerate = kwdargs['samplerate']
-            except KeyError:
-                samplerate = get_pref('DEFAULT_SAMPLERATE', default = 44100)
-        shape[0] = round(shape[0] * samplerate)
+    if not isinstance(shape[0], float):
+        raise ValueError('Impulse response length must be specified in samples or float (seconds)')
+    else:
+        try:
+            samplerate = kwdargs['samplerate']
+        except KeyError:
+            samplerate = get_pref('DEFAULT_SAMPLERATE', default = 44100)
+    shape[0] = round(shape[0] * samplerate)
     
     ###### dimension 1
     n = shape[1]

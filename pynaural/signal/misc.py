@@ -1,18 +1,22 @@
-import numpy as np
-from brian import Quantity
-from scipy.signal import *
 from numpy.fft import *
-from ..utils import *
-from brian.hears.db import dB
-from brian.stdunits import Hz
-from brian.hears.sounds import whitenoise, Sound
+
 from brian.hears import Gammatone, Repeat
+from scipy.signal import *
 import scipy as sp
 
+from pynaural.signal.sounds import Sound
+
+__all__ = ['my_logspace',
+           'octaveband_filterbank',
+           'octaveband_smoothing', 'rms',
+           'fftconvolve', 'fftxcorr',
+           'ola_filter', 'zeropad',
+           'nextpow2'
+           ]
 
 def my_logspace(fdown, fup, nfreqs):
     '''
-    Returns nfreqs logarithmically distributed frequencies between fdown and fup 
+    Returns nfreqs logarithmically distributed frequencies between fdown and fup
     '''
     upvalue = np.log(fup)/np.log(fdown)
     return np.logspace(1, upvalue, num = nfreqs, endpoint = True, base = fdown)
@@ -27,7 +31,7 @@ def octaveband_smoothing(data, width = 1./3):
     if len(data.shape) == 1:
         data.shape = (data.shape[0], 1)
     res = np.zeros_like(data)
-    
+
     for k in xrange(1, data.shape[0]):
         low = int(round(k/2.0**(width)))
         high= int(min(round(k*2.0**(width)),data.shape[0]))
@@ -102,19 +106,24 @@ def dBconv(x):
     '''
     Returns the dB value of the array (i.e. 20*log10(x))
     '''
-    return 20*np.log10(x)*dB
+    return 20*np.log10(x)
 
 def dB_SPL(x):
     '''
     Returns the dB SPL value of the array, assuming it is in Pascals
     '''
-    return 20.0*np.log10(rms(x)/2e-5)*dB
+    return 20.0*np.log10(rms(x)/2e-5)
+
 
 def rms(x, axis = 0):
     '''
     Returns the RMS value of the array given as argument
     '''
-    return np.sqrt(np.mean((np.asarray(x)-np.mean(np.asarray(x), axis = axis))**2, axis = axis))
+    return np.sqrt(np.mean(np.asarray(x)**2, axis = axis))
+# old but bad
+#    return np.sqrt(np.mean((np.asarray(x)-np.mean(np.asarray(x), axis = axis))**2, axis = axis))
+
+
 
 ## padding utils functions for FFT
 
@@ -132,12 +141,12 @@ def nextpow2(n):
 
 ## Band pas noise generation
 
-def bandpass_noise(duration, fc, 
-                   fraction = 1./2, stopband_fraction = 1., 
+def bandpass_noise(duration, fc,
+                   fraction = 1./2, stopband_fraction = 1.,
                    samplerate = 44100.,
                    gstop = 10., gpass = 0.01):
     '''
-    Returns a Sound which is a bp filtered version of white noise with fc and fraction filter, using butterworth filters. 
+    Returns a Sound which is a bp filtered version of white noise with fc and fraction filter, using butterworth filters.
     '''
     noise = whitenoise(duration, samplerate = samplerate)
 
@@ -146,13 +155,13 @@ def bandpass_noise(duration, fc,
 
     fnyquist = noise.samplerate/2.
 
-    N, wn = sp.signal.buttord(ws = [flow/fnyquist,fhigh/fnyquist], 
+    N, wn = sp.signal.buttord(ws = [flow/fnyquist,fhigh/fnyquist],
                               wp = [flow_stop/fnyquist,fhigh_stop/fnyquist],
                               gpass=gpass,
                               gstop=gstop)
 
     b, a = sp.signal.butter(N, wn, btype = 'bandpass')
-    sf = Sound(sp.signal.lfilter(b, a, noise.flatten()), 
+    sf = Sound(sp.signal.lfilter(b, a, noise.flatten()),
                samplerate = noise.samplerate)
     return sf
 
@@ -163,10 +172,10 @@ def gammatone_correlate(hrir, samplerate, cf, return_times = False):
     returns the correlograms of hrir per band
     '''
     hrir = hrir.squeeze()
-        
+
     if not isinstance(hrir, Sound):
         hrir = Sound(hrir, samplerate = samplerate)
-    
+
     fb = Gammatone(Repeat(hrir, len(cf)), np.hstack((cf, cf)))
     filtered_hrirset = fb.process()
     res = np.zeros((hrir.shape[0]*2-1, len(cf)))
@@ -177,52 +186,9 @@ def gammatone_correlate(hrir, samplerate, cf, return_times = False):
     if return_times:
         times = (np.arange(len(left)+len(right))+1-len(left))/hrir.samplerate
         return times, res
-    else: 
+    else:
         return res
 
-def gammatone_coherence(hrir, samplerate, cf, tcut = 1e-3):
-    '''
-    returns the coherence of hrir per band in gammatone filters
-    '''
-    hrir = hrir.squeeze()
-
-    if not isinstance(hrir, Sound):
-        if isinstance(samplerate, Quantity):
-            hrir = Sound(hrir, samplerate = samplerate)
-        else:
-            hrir = Sound(hrir, samplerate = samplerate*Hz)
-
-    fb = Gammatone(Repeat(hrir, len(cf)), np.hstack((cf, cf)))
-    filtered_hrirset = fb.process()
-    res = np.zeros(len(cf))
-    for i in range(len(cf)):
-        left = filtered_hrirset[:, i]
-        right = filtered_hrirset[:, i+len(cf)]
-        times = (np.arange(len(left)+len(right)-1)+1-len(left))/hrir.samplerate
-        xcorr = fftxcorr(left, right)
-        res[i] = np.max(xcorr[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
-    return res
-
-def broadband_coherence(hrir, samplerate, tcut = 1e-3):
-    '''
-    returns the coherence of hrir per band in gammatone filters
-    '''
-    hrir = hrir.squeeze()
-
-    if not isinstance(hrir, Sound):
-        if isinstance(samplerate, Quantity):
-            hrir = Sound(hrir, samplerate = samplerate)
-        else:
-            hrir = Sound(hrir, samplerate = samplerate*Hz)
-
-
-    left = hrir.left
-    right = hrir.right
-    xcorr = np.abs(fftxcorr(left, right))
-
-    times = (np.arange(len(left)+len(right)-1)+1-len(left))/hrir.samplerate
-
-    return np.max(xcorr[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
 
 def octaveband_filterbank(sound, cfs, samplerate, fraction = 1./3, butter_order = 3):
     '''
@@ -246,69 +212,3 @@ def octaveband_filterbank(sound, cfs, samplerate, fraction = 1./3, butter_order 
 
     return res
 from matplotlib.pyplot import *
-
-def octaveband_coherence(hrir, samplerate, cfs, tcut = 1e-3, butter_order = 3, fraction = 1./3, return_envelope = False):
-    '''
-
-    :param hrir:
-    :param samplerate:
-    :param cf:
-    :param tcut:
-    :param butter_order:
-    :param fraction:
-    :return:
-    '''
-    hrir = hrir.squeeze()
-    if not isinstance(hrir, Sound):
-        if isinstance(samplerate, Quantity):
-            hrir = Sound(hrir, samplerate = samplerate)
-        else:
-            hrir = Sound(hrir, samplerate = samplerate*Hz)
-
-    filtered_left = octaveband_filterbank(hrir[:,0], cfs, hrir.samplerate, fraction = fraction, butter_order = butter_order)
-    filtered_right = octaveband_filterbank(hrir[:,1], cfs, hrir.samplerate, fraction = fraction, butter_order = butter_order)
-
-    res = np.zeros(len(cfs))
-
-    if return_envelope:
-        res_env = np.zeros(len(cfs))
-
-    for i in range(len(cfs)):
-        left = filtered_left[:, i]
-        right = filtered_right[:, i]
-        times = (np.arange(len(left)+len(right)-1)+1-len(left))/hrir.samplerate
-        xcorr = fftxcorr(left, right)
-        res[i] = np.max(xcorr[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
-
-        if return_envelope:
-            left_env = np.abs(sp.signal.hilbert(left))
-            right_env = np.abs(sp.signal.hilbert(right))
-            xcorr_env = fftxcorr(left_env, right_env)
-            res_env[i] = np.max(xcorr_env[np.abs(times) < tcut])/(rms(left_env)*rms(right_env)*len(right_env))
-            if res_env[i]>1:
-                subplot(311)
-                plot(left)
-                plot(left_env)
-                subplot(312)
-                plot(right)
-                plot(right_env)
-                subplot(313)
-                plot(xcorr_env)
-                draw()
-
-        if False:
-            clf()
-            subplot(211)
-            plot(left, 'b-')
-            plot(left_env, 'b--')
-            plot(right, 'g-')
-            plot(right_env, 'g--')
-            subplot(212)
-            plot(fftxcorr(left_env, right_env), 'b--')
-            plot(xcorr, 'k')
-            show()
-
-    if return_envelope:
-        return res, res_env
-    else:
-        return res

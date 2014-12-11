@@ -1,9 +1,12 @@
-from pynaural.signal.misc import gammatone_coherence, octaveband_filterbank
-from pynaural.signal.misc import fftxcorr
-from pynaural.io.sounds.sounds import Sound
-from matplotlib.pyplot import *
 import numpy as np
+
+from matplotlib.pyplot import *
 import scipy as sp
+
+from pynaural.signal.misc import octaveband_filterbank
+from pynaural.signal.misc import fftxcorr
+from pynaural.signal.sounds import Sound
+
 
 samplerate = 44100.
 

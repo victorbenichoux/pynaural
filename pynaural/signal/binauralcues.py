@@ -1,7 +1,5 @@
 from scipy import weave
 from scipy.weave import converters
-
-
 from pynaural.utils.debugtools import log_debug
 from pynaural.signal.smoothing import *
 from pynaural.signal.impulseresponse import *

@@ -1,7 +1,10 @@
-from pynaural.signal.misc import gammatone_coherence, octaveband_coherence
-from pynaural.io.sounds.sounds import Sound
-from matplotlib.pyplot import *
 import numpy as np
+
+from matplotlib.pyplot import *
+
+from pynaural.signal.coherence import octaveband_coherence, gammatone_coherence
+from pynaural.signal.sounds import Sound
+
 
 noise0 = Sound(np.random.randn(10000), samplerate = 44100.)
 noise1 = Sound(np.random.randn(10000), samplerate = 44100.)
