@@ -4,9 +4,7 @@ import scipy as sp
 
 from pynaural.signal.sounds import Sound
 
-__all__ = ['my_logspace',
-           'octaveband_filterbank',
-           'octaveband_smoothing', 'rms',
+__all__ = ['my_logspace', 'rms',
            'fftconvolve', 'fftxcorr',
            'ola_filter', 'zeropad',
            'nextpow2'
@@ -18,24 +16,6 @@ def my_logspace(fdown, fup, nfreqs):
     '''
     upvalue = np.log(fup)/np.log(fdown)
     return np.logspace(1, upvalue, num = nfreqs, endpoint = True, base = fdown)
-
-## smoothing of spectral data in bands of constant octave width.
-
-def octaveband_smoothing(data, width = 1./3):
-    '''
-    Octave band average with a moving window.
-    Data is assumed to be in columns (i.e. data.shape[0] is the number of samples)
-    '''
-    if len(data.shape) == 1:
-        data.shape = (data.shape[0], 1)
-    res = np.zeros_like(data)
-
-    for k in xrange(1, data.shape[0]):
-        low = int(round(k/2.0**(width)))
-        high= int(min(round(k*2.0**(width)),data.shape[0]))
-        res[k] = np.mean(data[low:high, :], axis = 0)
-
-    return res
 
 ## FFT-based convolution and cross correlation
 

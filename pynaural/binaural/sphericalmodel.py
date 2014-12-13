@@ -1,13 +1,13 @@
-from pynaural.raytracer.geometry.base import degAz, degEl, FRONT
+import pynaural.raytracer.geometry.base as geom#import degAz, degEl, FRONT
+import pynaural.raytracer.receivers as rcvs#import degAz, degEl, FRONT
 from numpy.fft import fft, ifft, fftfreq
 import pynaural
 import numpy as np
 
-__all__ = ['SphericalHead']
+__all__ = ['SphericalHead', 'SphericalHeadReceiver']
 
 MAX_ITER = 1e7
 c = 342.
-
 
 
 class SphericalHead(object):
@@ -239,8 +239,8 @@ class SphericalHead(object):
             azear = 90. - self.azear
         else:
             azear = -90. + self.azear
-        center_ear = (azear * degAz + self.elear * degEl) * FRONT
-        center_source = (az * degAz + el * degEl) * FRONT
+        center_ear = (azear * geom.degAz + self.elear * geom.degEl) * geom.FRONT
+        center_source = (az * geom.degAz + el * geom.degEl) * geom.FRONT
         return float((center_source*center_ear)/(center_source.norm()*center_ear.norm()))
         
     def _incidence(self, az, el, ear = 'left'):
@@ -265,3 +265,39 @@ class SphericalHead(object):
         '''
         t = np.linspace(0, 1, self.nfft) / self.samplerate
         return 2 * np.pi * t * c / self.a
+
+
+class SphericalHeadReceiver(rcvs.HRTFReceiver):
+    '''
+    Initialized with the height of the head center and interaural distance.
+    Is a simple two-points receiver that represents an empty head.
+
+    ** Initialization **
+
+    '''
+    def __init__(self, height, iad, orientation = geom.FRONT, samplerate = 44100.,
+                    nfft = 1024, pre_delay = 128):
+        if isinstance(height, float):
+            position = geom.Point(height * geom.UP)
+        else:
+            position = height
+        rcvs.OrientedReceiver.__init__(self, position, orientation)
+        self.headmodel = SphericalHead(iad, (0,0), samplerate = samplerate, nfft = nfft)
+        self.pre_delay = pre_delay
+        self.iad = iad
+        self.nsamples = self.headmodel.nfft
+        self.samplerate = samplerate
+
+    def get_ear_position(self, whichone):
+        d = geom.UP.vectorial_product(self.orientation)#vector from center to left ear
+        if whichone == 'left':
+            return geom.Point(self.iad/2.0*d + self.position)
+        elif whichone == 'right':
+            return geom.Point(-self.iad/2.0*d + self.position)
+        else:
+            ValueError('Fetched ear position must be left or right, it was '+str(whichone))
+
+    def get_hrir(self, az, el, d = 20):
+        return self.headmodel.get_hrir(az, el, pre_delay = self.pre_delay)
+
+

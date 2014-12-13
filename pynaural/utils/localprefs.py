@@ -1,7 +1,6 @@
 ## User Preferences
 # This file is used to store variables that are used in the other modules
 
-
 USE_WEAVE = False
 ## User Preferences                                                                                                                                                                                                                           
 # This file is used to store variables that are used in the other modules                                                                                                                                                                     

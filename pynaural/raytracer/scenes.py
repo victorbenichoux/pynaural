@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pynaural.utils.debugtools import log_debug
-from pynaural.raytracer.geometry.base import FloatTriplet, ORIGIN, Point, Vector, FRONT, BACK, LEFT, RIGHT, UP, DOWN, ORIGIN
-from pynaural.raytracer.geometry.surfaces import Plane, Surface, Sphere
+from pynaural.raytracer.geometry.base import FloatTriplet, Point, Vector, FRONT, BACK, LEFT, RIGHT, UP, DOWN, ORIGIN
+from pynaural.raytracer.geometry.surfaces import Plane, Surface
 from pynaural.raytracer.geometry.rays import Beam
 from pynaural.raytracer.sources import Source
 from pynaural.raytracer.receivers import Receiver
@@ -782,11 +782,11 @@ class RoomScene(GeometricScene):
         self.L = float(L)
         self.h = float(h)
 
-        self.leftwall = Plane(Point(-l/2., 0, 0), RIGHT, label = 'left wall', model = modeldict)
-        self.rightwall = Plane(Point(l/2., 0, 0), LEFT, label = 'right wall', model = modeldict)
-        self.backwall = Plane(Point(0, -L/2., 0), FRONT, label = 'back wall', model = modeldict)
-        self.frontwall = Plane(Point(0., L/2., 0), BACK, label = 'front wall', model = modeldict)
-        self.floor = Plane(Point(0, 0, 0), UP, label = 'floor', model = modeldict)
+        self.leftwall = Plane(Point([-l/2., 0, 0]), RIGHT, label = 'left wall', model = modeldict)
+        self.rightwall = Plane(Point([l/2., 0, 0]), LEFT, label = 'right wall', model = modeldict)
+        self.backwall = Plane(Point([0, -L/2., 0]), FRONT, label = 'back wall', model = modeldict)
+        self.frontwall = Plane(Point([0., L/2., 0]), BACK, label = 'front wall', model = modeldict)
+        self.floor = Plane(Point([0, 0, 0]), UP, label = 'floor', model = modeldict)
         self.ceiling = Plane(UP * h, DOWN, label = 'ceiling', model = modeldict)
         
         super(RoomScene, self).__init__([self.leftwall,self.rightwall,

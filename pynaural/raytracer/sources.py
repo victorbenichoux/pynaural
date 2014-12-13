@@ -1,5 +1,5 @@
-from pynaural.raytracer.geometry import *
-from pynaural.raytracer.geometry.base import FloatTriplet, FRONT
+from pynaural.raytracer.geometry.rays import RandomSphericalBeam
+from pynaural.raytracer.geometry.base import FloatTriplet, FRONT, Point, Vector, degAz, degEl, ORIGIN, orthodromic_distance
 from pynaural.raytracer.geometry.surfaces import Sphere
 from pynaural.utils.debugtools import log_debug
 from pynaural.raytracer.receivers import Receiver, OrientedReceiver
@@ -259,13 +259,15 @@ class EqualizedSource(Source):
                 res += voronoi_partition(data, N)/50
             return res
 
-    
+
 #################### UTILS
 # make an object iterable
 def ensure_iterable(obj):
-    if not iterable(obj):
-        obj = [obj]
-    return obj
+    try:
+        [x for x in obj]
+        return obj
+    except TypeError:
+        return [obj]
 
 
 # Voronoi partitioning

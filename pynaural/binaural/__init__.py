@@ -1,2 +1,6 @@
-__author__ = 'victorbenichoux'
-__all__ = ['binauralcues', 'coherence', 'sphericalmodel']
+from .binauralcues import *
+from .coherence import *
+from .sphericalmodel import *
+
+#__author__ = 'victorbenichoux'
+#__all__ = ['binauralcues', 'coherence', 'sphericalmodel']

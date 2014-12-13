@@ -2,7 +2,6 @@ import numpy as np
 from pynaural.raytracer.geometry.rays import SphericalBeam, Beam
 from pynaural.raytracer.geometry.base import Point, Vector, FRONT, UP, cartesian2spherical
 from pynaural.signal.impulseresponse import ImpulseResponse, _makecoordinates
-from pynaural.binaural.sphericalmodel import SphericalHead
 from pynaural.utils.spatprefs import get_pref
 from pynaural.utils.debugtools import log_debug
 from pynaural.io.hrtfs.ircam import ircamHRIR
@@ -10,7 +9,7 @@ from pynaural.io.hrtfs.ircam import ircamHRIR
 
 __all__ = ['Receiver',
            'OrientedReceiver',
-           'HRTFReceiver', 'SphericalHeadReceiver',
+           'HRTFReceiver',
            'IRCAMSubjectReceiver']
 
 ########################### Receivers ##################
@@ -307,40 +306,6 @@ class IRCAMSubjectReceiver(HRTFReceiver):
             position = position*UP
 
         HRTFReceiver.__init__(self, position, ircamHRIR(subject, path=path), orientation=orientation, is_distancedependent=False)
-
-######################## Spherical head model
-class SphericalHeadReceiver(HRTFReceiver):
-    '''
-    Initialized with the height of the head center and interaural distance.
-    Is a simple two-points receiver that represents an empty head.
-
-    ** Initialization **
-
-    '''
-    def __init__(self, height, iad, orientation = FRONT, samplerate = 44100.,
-                    nfft = 1024, pre_delay = 128):
-        if isinstance(height, float):
-            position = Point(height * UP)
-        else:
-            position = height
-        OrientedReceiver.__init__(self, position, orientation)
-        self.headmodel = SphericalHead(iad, (0,0), samplerate = samplerate, nfft = nfft)
-        self.pre_delay = pre_delay
-        self.iad = iad
-        self.nsamples = self.headmodel.nfft
-        self.samplerate = samplerate
-
-    def get_ear_position(self, whichone):
-        d = UP.vectorial_product(self.orientation)#vector from center to left ear
-        if whichone == 'left':
-            return Point(self.iad/2.0*d + self.position)
-        elif whichone == 'right':
-            return Point(-self.iad/2.0*d + self.position)
-        else:
-            ValueError('Fetched ear position must be left or right, it was '+str(whichone))
-
-    def get_hrir(self, az, el, d = 20):
-        return self.headmodel.get_hrir(az, el, pre_delay = self.pre_delay)
 
 
 ################### closest coordinates #################################

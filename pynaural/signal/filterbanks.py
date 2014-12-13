@@ -6,8 +6,8 @@ from pynaural.signal.sounds import Sound
 
 __author__ = 'victorbenichoux'
 
-__all__ = ['octaveband_filterbank,',
-            'gammatone_filterbank,',
+__all__ = ['octaveband_filterbank',
+            'gammatone_filterbank',
             'gammatone_correlate']
 
 
