@@ -1,8 +1,7 @@
 import numpy as np
-from .misc import *
-from .impulseresponse import *
-from brian.hears import *
-from brian.stdunits import kHz, Hz, ms
+from pynaural.signal.misc import ola_filter
+from pynaural.signal.impulseresponse import ImpulseResponse, dur2sample
+from pynaural.signal.sounds import Sound
 
 def deconvolve(signal, sweep):
     '''

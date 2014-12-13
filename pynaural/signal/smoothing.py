@@ -1,8 +1,11 @@
 import numpy as np
-from scipy.signal import *
 from numpy.fft import *
-from misc import *
+#from pynaural.signal.misc import *
 
+__all__ = ['uniform_smoothing', 'octaveband', 'twocoefs_window', 'windowwidth',
+           'hannwindow', 'hammingwindow', 'rectangularwindow', 'octaveband_smoothing',
+           'nonuniform_smoothing', 'nonuniform_spectralsmoothing', 'complexsmoothing',
+           'newcomplexsmoothing', 'cummax', 'onset_detection', 'apply_windowing']
 
 ######################## Spectral smoothing ########################
 # both uniform & non uniform (in frequency) are implemented
@@ -60,8 +63,8 @@ def uniform_smoothing(tfs, method = 'rectangular', ntap = 5, end = 'zeros'):
             res[0, :] = tfs[0, :] + tfs[1, :]
             res[0, :] /= 2
             for k in range(1, startpoint):
-                res[k] = mean(tfs[:2*k])
-                res[-(k+1)] = mean(tfs[-(2*k+1):])
+                res[k] = np.mean(tfs[:2*k])
+                res[-(k+1)] = np.mean(tfs[-(2*k+1):])
             res[-1, :] = tfs[-1, :] + tfs[-2, :]
             res[-1, :] /=2
         elif end == 'original':
@@ -91,7 +94,7 @@ def twocoefs_window(m, k , b = .54):
     W(k) = (b-(b-1)*cos(pi/m*k))/(2*b*(m+1)-1)
     Output will always be normalized.
     '''
-    res = (b-(b-1)*cos(pi/m*k))/(2*b*(m+1)-1)
+    res = (b-(b-1)*np.cos(np.pi/m*k))/(2*b*(m+1)-1)
     norm = np.sum(res)
     if not norm == 1:
         # sometimes we need to re-normalize, why?
@@ -151,7 +154,7 @@ def nonuniform_spectralsmoothing(data, samplerate, b = 1.,
     '''
     N = data.shape[0]
     fbin = float(samplerate) / N
-    res = zeros(data.shape, dtype = complex)
+    res = np.zeros(data.shape, dtype = complex)
 
     if not (datascale is None):
         with_datascale = True
@@ -206,7 +209,7 @@ def nonuniform_smoothing(data, samplerate = 44100., width = 1./3, datascale = No
 
     N = len(datascale)
         
-    res = zeros(data.shape, dtype = complex)
+    res = np.zeros(data.shape, dtype = complex)
     
     # parsing the input arguments
     if type(width) == int:
@@ -233,7 +236,7 @@ def nonuniform_smoothing(data, samplerate = 44100., width = 1./3, datascale = No
                 #        semilogx(k*fbin, up, ' +')
                 #        semilogx(k*fbin, down, 'o')
                 mk = up-down
-                w = twocoefs_window(mk, arange(-mk/2, mk/2), b = b)            
+                w = twocoefs_window(mk, np.arange(-mk/2, mk/2), b = b)
         res[k] = np.sum(data[down:up]*w)
     return res
 
@@ -291,7 +294,7 @@ def complexsmoothing(x, samplerate, width = 1./3, b = .54, onset_safeguard = 0):
 
 def newcomplexsmoothing(x, samplerate, width = 1./3, b = .54, onset_safeguard = 0):
     '''
-    slightly different version where the linear delay is removed from the phase. 
+    slightly different version where the linear delay is removed from the phase.
     onset_safeguard kwdargs is IGNORED
     still going back to the time domain doesn't work
     '''
@@ -310,7 +313,7 @@ def newcomplexsmoothing(x, samplerate, width = 1./3, b = .54, onset_safeguard = 
     # third step: we compute the phases
     # new phases computations
     phases = nonuniform_spectralsmoothing(x_newphases, samplerate, width = width, b = b)
-    # and set all the amplitudes to 
+    # and set all the amplitudes to
     phasepart = np.exp(1j*phases)
     # fourth step: the result
     res_ft = amps*phasepart
@@ -327,8 +330,8 @@ def cummax(x):
     for i in range(len(x)): res[i] = max(x[:i])
     but way faster.
     '''
-    tmp = np.tile(asarray(x).reshape(1, len(x)), (len(x), 1))
-    tmp *= np.tril(ones(tmp.shape))
+    tmp = np.tile(np.asarray(x).reshape(1, len(x)), (len(x), 1))
+    tmp *= np.tril(np.ones(tmp.shape))
     return np.max(tmp, axis = 1)
 
 def onset_detection(x, threshold = .01):
@@ -352,14 +355,14 @@ def apply_windowing(x, t = None, bandwidth = None):
     if t is None:
         t = len(x)/2
 
-    trans_window = (np.cos(arange(bandwidth, dtype = float)/bandwidth * np.pi)+1)/2
+    trans_window = (np.cos(np.arange(bandwidth, dtype = float)/bandwidth * np.pi)+1)/2
     
     n = len(x)
     
     nbefore = t-bandwidth/2
     nafter = n-(t+bandwidth/2)
 
-    window = np.hstack((ones(nbefore), trans_window, zeros(nafter)))
+    window = np.hstack((np.ones(nbefore), trans_window, np.zeros(nafter)))
     window.shape = (len(window),1)
     window_tot = np.tile(window, (1,x.shape[1]))
     return x*window

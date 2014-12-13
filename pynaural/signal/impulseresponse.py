@@ -748,13 +748,18 @@ class ImpulseResponse(np.ndarray):
         defaultsamplerate = get_pref('DEFAULT_SAMPLERATE',
                                             default = 44100.)
         samplerate = kwdargs.get('samplerate', defaultsamplerate)
+
         kwdargs['is_delay'] = True
+
+        delay = np.array(delay)
         res = zerosIR(shape, **kwdargs)
-        if isinstance(delay, float):
-            delay = dur2sample(delay, samplerate)
-        if delay > res.shape[0]:
+
+        if isinstance(delay[0], float):
+            delay = np.array(np.rint(delay*samplerate), dtype = int)
+
+        if (delay > res.shape[0]).any():
             raise ValueError('Delay too long for the duration of the IR')
-        res[delay,:] = 1
+        res[delay,:] = 1.
         return res
 
     @staticmethod
@@ -1452,18 +1457,13 @@ def _shape_from_kwdargs(shape, kwdargs):
     # single Quantity)
     #
     ###### dimension 0
+    samplerate = kwdargs.pop('samplerate', get_pref('DEFAULT_SAMPLERATE', default = 44100))
     if not type(shape) == tuple:
         shape = (shape, 1)
 
     shape = list(shape)
-    if not isinstance(shape[0], float):
-        raise ValueError('Impulse response length must be specified in samples or float (seconds)')
-    else:
-        try:
-            samplerate = kwdargs['samplerate']
-        except KeyError:
-            samplerate = get_pref('DEFAULT_SAMPLERATE', default = 44100)
-    shape[0] = round(shape[0] * samplerate)
+    if isinstance(shape[0], float):
+        shape[0] = round(shape[0] * samplerate)
     
     ###### dimension 1
     n = shape[1]

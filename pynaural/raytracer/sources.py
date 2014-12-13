@@ -1,5 +1,5 @@
 from pynaural.raytracer.geometry import *
-from pynaural.raytracer.geometry.base import FloatTriplet
+from pynaural.raytracer.geometry.base import FloatTriplet, FRONT
 from pynaural.raytracer.geometry.surfaces import Sphere
 from pynaural.utils.debugtools import log_debug
 from pynaural.raytracer.receivers import Receiver, OrientedReceiver

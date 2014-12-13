@@ -129,12 +129,20 @@ class Sound(np.ndarray):
                         doc='The number of samples in the sound.')
     times = property(fget=lambda self: np.arange(len(self), dtype=float) / self.samplerate,
                      doc='An array of times (in seconds) corresponding to each sample.')
-    nchannels = property(fget=lambda self:self.shape[1],
-                         doc='The number of channels in the sound.')
+
     left = property(fget=lambda self:self.channel(0),
                     doc='The left channel for a stereo sound.')
     right = property(fget=lambda self:self.channel(1),
                      doc='The right channel for a stereo sound.')
+
+    @property
+    def nchannels(self):
+        '''
+        The number of channels in the sound.
+        :return:
+        '''
+        print self.shape
+        return self.shape[1]
 
     def __new__(cls, data, samplerate=None, duration=None):
         if isinstance(data, np.ndarray):
@@ -236,85 +244,12 @@ class Sound(np.ndarray):
     def __setslice__(self, start, stop, seq):
         return self.__setitem__(slice(start, stop), seq)
 
-    def __getitem__(self,key):
-        channel = slice(None)
-        if isinstance(key, tuple):
-            channel = key[1]
-            key = key[0]
+    ################## SLICING #######################
+    def __getitem__(self, key):
+        return np.asarray(self).__getitem__(key)
 
-        if isinstance(key, int):
-            return np.ndarray.__getitem__(self, key)
-        if isinstance(key, float):
-            return np.ndarray.__getitem__(self, round(key*self.samplerate))
-
-        sliceattr = [v for v in [key.start, key.stop] if v is not None]
-        attrisint = np.array([isinstance(v, int) for v in sliceattr])
-        s = sum(attrisint)
-        if s!=0 and s!=len(sliceattr):
-            raise ValueError('Slice attributes must be all ints or all times')
-        if s==len(sliceattr): # all ints
-            start = key.start or 0
-            stop = key.stop or self.shape[0]
-            step = key.step or 1
-            if start>=0 and stop<=self.shape[0]:
-                return Sound(np.ndarray.__getitem__(self, (key, channel)),
-                             self.samplerate)
-            else:
-                startpad = max(-start, 0)
-                endpad = max(stop-self.shape[0], 0)
-                startmid = max(start, 0)
-                endmid = min(stop, self.shape[0])
-                atstart = np.zeros((startpad, self.shape[1]))
-                atend = np.zeros((endpad, self.shape[1]))
-                return Sound(np.vstack((atstart,
-                                     np.asarray(self)[startmid:endmid:step],
-                                     atend)), self.samplerate)
-
-        start = key.start or 0
-        stop = key.stop or self.duration
-        step = key.step or 1
-        if int(step)!=step:
-            #resampling
-            raise NotImplementedError
-        start = int(np.rint(start*self.samplerate))
-        stop = int(np.rint(stop*self.samplerate))
-        return self.__getitem__((slice(start,stop,step),channel))
-
-    def __setitem__(self,key,value):
-        channel=slice(None)
-        if isinstance(key,tuple):
-            channel=key[1]
-            key=key[0]
-
-        if isinstance(key,int):
-            return np.ndarray.__setitem__(self,(key,channel),value)
-        if isinstance(key,float):
-            return np.ndarray.__setitem__(self,(int(np.rint(key*self.samplerate)),channel),value)
-
-        sliceattr = [v for v in [key.start, key.step, key.stop] if v is not None]
-        attrisint = np.array([isinstance(v, int) for v in sliceattr])
-        s = sum(attrisint)
-        if s!=0 and s!=len(sliceattr):
-            raise ValueError('Slice attributes must be all ints or all times')
-        if s==len(sliceattr): # all ints
-            # If value is a mono sound its shape will be (N, 1) but the numpy
-            # setitem will have shape (N,) so in this case it's a shape mismatch
-            # so we squeeze the array to make sure this doesn't happen.
-            if isinstance(value,Sound) and channel!=slice(None):
-                value=value.squeeze()
-            return np.asarray(self).__setitem__((key,channel),value) # returns None
-
-        if key.__getattribute__('step') is not None:
-            # resampling?
-            raise NotImplementedError
-
-        start = key.start
-        stop = key.stop or self.duration
-        if (start is not None and start<0) or stop > self.duration:
-            raise IndexError('Slice bigger than Sound object')
-        if start is not None: start = int(np.rint(start*self.samplerate))
-        stop = int(np.rint(stop*self.samplerate))
-        return self.__setitem__((slice(start,stop),channel),value)
+    def __setitem__(self, key, val):
+        np.asarray(self).__setitem__(key, val)
 
     def extended(self, duration):
         '''

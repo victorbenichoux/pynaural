@@ -1,13 +1,15 @@
-from scipy import weave
-from scipy.weave import converters
+import numpy as np
+from numpy.fft import fft, fftfreq, ifft
+
 from pynaural.utils.debugtools import log_debug
-from pynaural.signal.smoothing import *
-from pynaural.signal.impulseresponse import *
-from pynaural.signal.filterbanks import *
+from pynaural.signal.sounds import Sound
+from pynaural.signal.impulseresponse import ImpulseResponse
+from pynaural.signal.filterbanks import gammatone_correlate
 import pynaural.signal.fitting as fit
 from brian.hears import Gammatone, Repeat
 
-
+__all__ = ['itdp_itdg_idi','itd_xcorr', 'itd_ild_bare', 'itd_ild_xcorr',
+            'itd_onset', 'ild', 'bb_itd_ild_xcorr', 'ild_bare', 'ipd']
 ######################################################
 ################## ITD computation  ##################
 ######################################################
@@ -115,21 +117,21 @@ def itd_onset(hrir, cf, threshold = .15):
     if hrir.ncoordinates > 1:
         for k in range(hrir.ncoordinates):
             if k==0:
-                res = itd_simple_bare(hrir.forcoordinate(k), cf, threshold = threshold)
+                res = itd_onset_bare(hrir.forcoordinate(k), cf, threshold = threshold)
             else:
-                res = vstack((res,itd_simple_bare(hrir.forcoordinate(k), cf, threshold = threshold)))
+                res = np.vstack((res,itd_onset_bare(hrir.forcoordinate(k), cf, threshold = threshold)))
         return res.T
     else:
-        return itd_simple_bare(hrir, cf, threshold = threshold)    
+        return itd_onset_bare(hrir, cf, threshold = threshold)
 
 def itd_onset_bare(hrir, cf, threshold = .15):
     if not isinstance(hrir, Sound):
         hrir = Sound(hrir, samplerate = hrir.samplerate)
 
-    fb = Gammatone(Repeat(hrir, len(cf)), hstack((cf, cf)))
+    fb = Gammatone(Repeat(hrir, len(cf)), np.hstack((cf, cf)))
     filtered_hrirset = fb.process()
 
-    itds = zeros_like(cf)
+    itds = np.zeros_like(cf)
     
     for i in range(len(cf)):
         left = ImpulseResponse(filtered_hrirset[:, i], hrir.samplerate)
@@ -146,7 +148,7 @@ def ipd(hrir, unwrap = False, threshold = np.pi, positivefreqs = False):
     '''
     Computes the phase difference of a binaural ImpulseResponse object.
     '''
-    hrir_ft = fft(asarray(hrir), axis = 0)
+    hrir_ft = fft(np.asarray(hrir), axis = 0)
     middle = hrir.shape[1]/2
     ipds =  np.angle(hrir_ft[:, :middle]) - np.angle(hrir_ft[:, middle:])
     if unwrap:
@@ -182,12 +184,12 @@ def ild_bare(hrir, cf, **kwdargs):
         return np.zeros(len(cf))
 
     if (abs(hrir[:,0])<= 10e-6).all() or  (abs(hrir[:,1])<=10e-6).all():
-        db.log_debug('Blank hrirs detected, output will be weird')
+        log_debug('Blank hrirs detected, output will be weird')
 
     if not isinstance(hrir, Sound):
         hrir = Sound(hrir, samplerate = samplerate)
 
-    fb = Gammatone(Repeat(hrir, len(cf)), hstack((cf, cf)))
+    fb = Gammatone(Repeat(hrir, len(cf)), np.hstack((cf, cf)))
     filtered_hrirset = fb.process()
     
     ilds = []
@@ -195,11 +197,11 @@ def ild_bare(hrir, cf, **kwdargs):
         left = filtered_hrirset[:, i]
         right = filtered_hrirset[:, i+len(cf)]
         # This FFT stuff does a correlate(left, right, 'full')
-        Lf = fft(hstack((left, zeros(len(left)))))
-        Rf = fft(hstack((right[::-1], zeros(len(right)))))
+        Lf = fft(np.hstack((left, np.zeros(len(left)))))
+        Rf = fft(np.hstack((right[::-1], np.zeros(len(right)))))
         C = ifft(Lf*Rf).real
-        ilds.append(sqrt(amax(C)/sum(right**2)))
-    ilds = array(ilds)
+        ilds.append(np.sqrt(np.amax(C)/sum(right**2)))
+    ilds = np.array(ilds)
     return ilds
 
 # computes both ITD and ILD using xcorr
@@ -222,28 +224,15 @@ def itd_ild_xcorr(hrir, cf, cpu = 1):
     else does some multiprocessing to compute the rest, using conventions noted in ImpulseResponse
     '''
     if isinstance(hrir, ImpulseResponse):
-        db.log_debug('Starting ITD computations for '+str(hrir.ncoordinates)+' HRIR pairs')
-        if hrir.ncoordinates > 1 and cpu > 1:
-            Nruns = int(ceil(hrir.ncoordinates/float(cpu)))
+        log_debug('Starting ITD computations for '+str(hrir.ncoordinates)+' HRIR pairs')
+        if hrir.ncoordinates > 1:
             res = []
-            for i in range(Nruns):
-                startid = i * cpu
-                endid = min(startid + cpu, hrir.ncoordinates)
-                
-                res += ph.map(itd_ild_bare, range(startid, endid),
-                                  shared_data = {'samplerate' : 44100., 
-                                                 'hrir': asarray(hrir), 
-                                                 'cf': cf})
+            for k in range(hrir.ncoordinates):
+                res.append(itd_ild_bare(hrir.forcoordinates
+(k), cf))
             return res
         else:
-            if hrir.ncoordinates > 1:
-                res = []
-                for k in range(hrir.ncoordinates):
-                    res.append(itd_ild_bare(hrir.forcoordinates
-(k), cf))
-                return res
-            else:
-                return itd_ild_bare(hrir, cf)
+            return itd_ild_bare(hrir, cf)
         
 def itd_ild_bare(*args, **kwdargs):
     '''
@@ -261,19 +250,19 @@ def itd_ild_bare(*args, **kwdargs):
         cf = shared_data['cf']
 
         hrir = ImpulseResponse(hrir[:, [k, k + hrir.shape[1]/2]], 
-                               samplerate = samplerate * Hz)
+                               samplerate = samplerate)
         
     samplerate = hrir.samplerate
     if (hrir[:,0] == hrir[:,1]).all():
-        return (zeros(len(cf)),zeros(len(cf)))
+        return (np.zeros(len(cf)),np.zeros(len(cf)))
     if (abs(hrir[:,0])<= 10e-6).all() or  (abs(hrir[:,1])<=10e-6).all():
-        db.log_debug('Blank hrirs detected, output will be weird')
+        log_debug('Blank hrirs detected, output will be weird')
         
     if not isinstance(hrir, Sound):
         hrir = Sound(hrir, samplerate = samplerate)
         
     
-    fb = Gammatone(Repeat(hrir, len(cf)), hstack((cf, cf)))
+    fb = Gammatone(Repeat(hrir, len(cf)), np.hstack((cf, cf)))
     filtered_hrirset = fb.process()
     itds = []
     ilds = []
@@ -282,30 +271,26 @@ def itd_ild_bare(*args, **kwdargs):
         right = filtered_hrirset[:, i+len(cf)]
         
         # This FFT stuff does a correlate(left, right, 'full')
-        Lf = fft(hstack((left, zeros(len(left)))))
-        Rf = fft(hstack((right[::-1], zeros(len(right)))))
+        Lf = fft(np.hstack((left, np.zeros(len(left)))))
+        Rf = fft(np.hstack((right[::-1], np.zeros(len(right)))))
         C = ifft(Lf*Rf).real
         
-        i = argmax(C)+1-len(left)
+        i = np.argmax(C)+1-len(left)
         
         itds.append(i/samplerate)
-        ilds.append(sqrt(amax(C)/sum(right**2)))
+        ilds.append(np.sqrt(np.amax(C)/sum(right**2)))
         
-    itds = array(itds)
-    ilds = array(ilds)
+    itds = np.array(itds)
+    ilds = np.array(ilds)
     
     return itds, ilds
-
-
-
-                               
 
 ################# IPD and phase unwrapping
 def ipd(hrir, unwrap = False, threshold = np.pi, positivefreqs = False):
     '''
     Computes the phase difference of a binaural ImpulseResponse object.
     '''
-    hrir_ft = fft(asarray(hrir), axis = 0)
+    hrir_ft = fft(np.asarray(hrir), axis = 0)
     middle = hrir.shape[1]/2
     ipds =  np.angle(hrir_ft[:, :middle]) - np.angle(hrir_ft[:, middle:])
     if unwrap:

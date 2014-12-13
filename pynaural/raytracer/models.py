@@ -1,7 +1,7 @@
 '''
 This is a new class designed to replace the old Model paradigm that is getting messy and outdated
 '''
-from pynaural.raytracer import cartesian2spherical
+from pynaural.raytracer.geometry.base import cartesian2spherical
 from pynaural.raytracer.acoustics import spherical_ref_factor
 import pynaural.signal.impulseresponse
 import numpy as np

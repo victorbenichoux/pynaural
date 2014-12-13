@@ -1,5 +1,7 @@
 from pynaural.raytracer.scenes import GeometricScene, GroundScene
 
+# TODO: obsolete! remove
+
 __all__ = ['NaturalGroundScene', 'AcousticScene']
 
 class NaturalGroundScene(GroundScene):
