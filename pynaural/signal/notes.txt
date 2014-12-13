@@ -4,16 +4,13 @@ impulseresponse
 	classes for simple IR/TF
 	
 misc.py
-	noise generating classes?
-	
+
+
 fitting.py
-	- circular linear regression
+	circular linear regression
 
 smoothing.py
 	octaveband_smoothing
-
-interpolation.py 
-	- should I include this?
 
 binauralcues.py
  	computation of ITD
@@ -23,8 +20,6 @@ binauralcues.py
 		- phase fit (ITDg, ITDp, IDI)
 		
 	computation of ILD
-
-spherical head model
 	
 measurement.py
 		

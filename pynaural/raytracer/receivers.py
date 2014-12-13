@@ -1,5 +1,4 @@
 import numpy as np
-
 from pynaural.raytracer.geometry.rays import SphericalBeam, Beam
 from pynaural.raytracer.geometry.base import Point, Vector, FRONT, UP, cartesian2spherical
 import pynaural.signal.impulseresponse

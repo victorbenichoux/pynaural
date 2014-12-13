@@ -3,7 +3,9 @@ from scipy.weave import converters
 from pynaural.utils.debugtools import log_debug
 from pynaural.signal.smoothing import *
 from pynaural.signal.impulseresponse import *
+from pynaural.signal.filterbanks import *
 import pynaural.signal.fitting as fit
+from brian.hears import Gammatone, Repeat
 
 
 ######################################################
@@ -309,49 +311,3 @@ def ipd(hrir, unwrap = False, threshold = np.pi, positivefreqs = False):
     if unwrap:
         ipds = np.unwrap(ipds, axis = 0, discont = threshold)
     return ipds
-
-####################################################################
-# gammatone filtering + cross correlation
-
-def gammatone_correlate(hrir, samplerate, cf, return_times = False):
-    '''
-    returns the correlograms of hrir per band
-    '''
-    hrir = hrir.squeeze()
-    if not isinstance(hrir, Sound):
-        hrir = Sound(hrir, samplerate = samplerate)
-    
-    fb = Gammatone(Repeat(hrir, len(cf)), hstack((cf, cf)))
-    filtered_hrirset = fb.process()
-    res = np.zeros((hrir.shape[0]*2, len(cf)))
-    for i in range(len(cf)):
-        left = filtered_hrirset[:, i]
-        right = filtered_hrirset[:, i+len(cf)]
-        times, res[:,i] = fftxcorr(left, right, hrir.samplerate)
-    if return_times:
-        return times, res
-    else: 
-        return res
-
-
-def create_gammatone_filterbank(hrir, cfs):
-    '''
-    creates a filterbank of size (hrir.shape[0], hrir.shape[1] * len(cfs))
-    the channels are organized as follows
-    
-    hrir[:,0], cf[0]
-    hrir[:,0], cf[1]
-    ...............
-    hrir[:,0], cf[-1]
-    hrir[:,1], cf[0]
-    ...............
-    etc...
-    
-    '''
-    fbs = []
-    for k in range(hrir.nchannels):
-        s = Sound(hrir[:,k], hrir.samplerate)
-        fbs.append(Gammatone(s, cfs))
-    fb = Join(*fbs)
-    return fb
-        
