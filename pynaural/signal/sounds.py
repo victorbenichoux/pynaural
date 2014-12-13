@@ -1,10 +1,11 @@
 import numpy as np
 import array as pyarray
-import time, struct
-
+import time
 from pynaural.io.soundlib import get_default_audioserver
 from pynaural.utils.spatprefs import get_pref
 from matplotlib.pyplot import *
+from scipy.signal import fftconvolve, lfilter
+from scipy.misc import factorial
 
 try:
     from scikits.samplerate import resample
@@ -12,11 +13,11 @@ try:
 except (ImportError, ValueError):
     have_scikits_samplerate = False
 
+'''
+This code is the same as the brian.hears Sound class except without the unit system, and also a different sound playing system.
+'''
 
-from scipy.signal import fftconvolve, lfilter
-from scipy.misc import factorial
-
-__all__ = ['BaseSound', 'Sound',
+__all__ = ['Sound',
            'pinknoise','brownnoise','powerlawnoise',
            'whitenoise', 'irns', 'irno',
            'tone', 'click', 'clicks', 'silence', 'sequence', 'harmoniccomplex',
@@ -408,13 +409,17 @@ class Sound(np.ndarray):
         return Sound(y, samplerate=samplerate)
 
 
-    def play(self, normalise=False, sleep=False):
+    def play(self, sleep=False):
         '''
         Plays the sound (normalised to avoid clipping if required). If
         sleep=True then the function will wait until the sound has finished
         playing before returning.
         '''
         # TODO rewrite using the audio servers here in pynaural
+        serv = get_default_audioserver()
+        serv.play(self)
+        if sleep:
+            time.sleep(self.duration)
 
     def spectrogram(self, low=None, high=None, log_power=True, other = None,  **kwds):
         '''
@@ -1090,7 +1095,9 @@ def play(*sounds, **kwds):
     if len(kwds):
         raise TypeError('Unexpected keyword arguments to function play()')
     sound = sequence(*sounds)
+
     sound.play(normalise=normalise, sleep=sleep)
+
 play.__doc__ = Sound.play.__doc__
 
 def savesound(sound, filename, normalise=False, samplewidth=2):

@@ -31,7 +31,7 @@ class AudioServer(object):
 
 class JackServer(AudioServer):
     def __init__(self):
-        pass
+        self.open()
     
     def open(self):
         self.client = jack.attach('PythonClient')
@@ -40,11 +40,10 @@ class JackServer(AudioServer):
         jack.register_port("in_1", jack.IsInput)
         jack.register_port("in_2", jack.IsInput)
         jack.register_port("out", jack.IsOutput)
-        client.activate()
+        self.client.activate()
 
         print "Jack ports (before):", jack.get_ports()
         jack.connect("system:capture_1", myname+":in_1")
-
 
     def print_client():
         print "Client:", myname
@@ -58,6 +57,10 @@ class JackServer(AudioServer):
         except jack.InputSyncError:
             print("InputSyncError")
 
+    def play(self, sound):
+        in_buf = np.zeros((sound.shape[0], 2))
+        self.process(sound, in_buf)
+
     def close(self):
         jack.detach()
         jack.deactivate()
@@ -69,14 +72,15 @@ class PyAudioServer(object):
 
     def play(self, sound, fs = None):
         if sound.shape[1] == 1:
-            sound = sound.tile((1,2))
+            np.tile(np.asarray(sound), (1, 2))
 
         channels = sound.shape[1]
 
         fs = fs or self.fs
+
         stream = self.server.open(format=8,
                     channels=channels,
-                    rate=fs,
+                    rate=int(fs),
                     output=True)
 
         x = np.array((2 ** 15 - 1) * np.clip(sound, -1, 1), dtype=np.int16)

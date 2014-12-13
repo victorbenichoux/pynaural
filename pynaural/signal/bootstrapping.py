@@ -1,3 +1,6 @@
+import numpy as np
+from pynaural.signal.fitting import circular_linear_regression
+
 ################################ BOOTSTRAP #############################
 
 from matplotlib.pyplot import *    
