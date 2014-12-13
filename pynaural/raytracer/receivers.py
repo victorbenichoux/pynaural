@@ -1,12 +1,12 @@
+import numpy as np
+
 from pynaural.raytracer.geometry.rays import SphericalBeam, Beam
-from pynaural.raytracer.geometry.base import Point, Vector, FRONT, BACK, LEFT, RIGHT, UP, DOWN, ORIGIN, \
-    cartesian2spherical
+from pynaural.raytracer.geometry.base import Point, Vector, FRONT, UP, cartesian2spherical
 import pynaural.signal.impulseresponse
-from pynaural.signal.sphericalmodel import SphericalHead
+from pynaural.binaural.sphericalmodel import SphericalHead
 from pynaural.utils.spatprefs import get_pref
 from pynaural.utils.debugtools import log_debug
 from pynaural.io.hrtfs.ircam import ircamHRIR
-import numpy as np
 
 
 __all__ = ['Receiver',

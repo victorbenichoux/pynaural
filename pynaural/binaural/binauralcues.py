@@ -5,20 +5,6 @@ from pynaural.signal.smoothing import *
 from pynaural.signal.impulseresponse import *
 import pynaural.signal.fitting as fit
 
-######################################################
-################## Interaural correlation  ###########
-######################################################
-def interaural_correlation(hrir, cfs, samplerate):
-    '''
-    Computes ITDs by looking at the cross correlation between channels
-    '''
-    itds = np.zeros((len(cfs), hrir.shape[1]/2))
-    for k in range(hrir.ncoordinates):
-        curir = hrir.forcoordinates(k)
-        C, times = gammatone_correlate(curir, hrir.samplerate, cfs)
-        for i in range(len(cfs)):
-            itds[i, k] = C[np.argmax(C[:, i])]
-    return itds
 
 ######################################################
 ################## ITD computation  ##################

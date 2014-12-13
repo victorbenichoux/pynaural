@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
-from pynaural.signal.misc import fftxcorr, rms, octaveband_filterbank
+from pynaural.signal.misc import fftxcorr, rms
+from pynaural.signal.filterbanks import octaveband_filterbank
 from pynaural.signal.sounds import Sound
 
 from brian.hears import Gammatone, Repeat

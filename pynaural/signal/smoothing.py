@@ -351,7 +351,6 @@ def apply_windowing(x, t = None, bandwidth = None):
 
     if t is None:
         t = len(x)/2
-        
 
     trans_window = (np.cos(arange(bandwidth, dtype = float)/bandwidth * np.pi)+1)/2
     

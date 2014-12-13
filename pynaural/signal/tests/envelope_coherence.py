@@ -1,6 +1,8 @@
 import scipy as sp
-from pynaural.signal.misc import *
 from matplotlib.pyplot import *
+
+from pynaural.signal.misc import *
+
 
 samplerate = 44100.
 cfs = my_logspace(350, 2000, 4)

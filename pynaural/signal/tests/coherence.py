@@ -1,8 +1,6 @@
-import numpy as np
-
 from matplotlib.pyplot import *
 
-from pynaural.signal.coherence import octaveband_coherence, gammatone_coherence
+from pynaural.binaural.coherence import octaveband_coherence, gammatone_coherence
 from pynaural.signal.sounds import Sound
 
 

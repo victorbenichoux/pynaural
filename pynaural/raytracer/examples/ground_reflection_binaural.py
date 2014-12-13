@@ -1,7 +1,7 @@
-from pynaural.raytracer import *
 from matplotlib.pyplot import *
-from pynaural.signal.impulseresponse import TransferFunction
-from pynaural.signal.binauralcues import *
+
+from pynaural.binaural.binauralcues import *
+
 # First, set up a spatializer scene with only a ground
 scene = GroundScene()
 
