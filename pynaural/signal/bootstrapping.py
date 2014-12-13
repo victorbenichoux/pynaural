@@ -1,9 +1,11 @@
 import numpy as np
 from pynaural.signal.fitting import circular_linear_regression
+from matplotlib.pyplot import *
+
+__all__ = ['sample_with_replacement', 'bootstrap', 'bootstrap_cl_regression', 'bootstrap_regression']
 
 ################################ BOOTSTRAP #############################
 
-from matplotlib.pyplot import *    
 def sample_with_replacement(data, size = None, axis = -1):
     '''
     Takes a sample of the data of the same size by default.

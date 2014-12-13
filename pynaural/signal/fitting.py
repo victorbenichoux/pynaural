@@ -5,6 +5,9 @@ from scipy.optimize import leastsq, fmin
 from scipy.stats import linregress
 import numpy as np
 
+__all__ = ['unwrap_and_fit', 'circular_linear_regression',
+           'circular_slope_bruteforce', 'guess_init', 'intercept_maximization',
+           'puredelay_fit', 'circular_slope_maximization', 'weighed_linear_regression']
 
 ################################ FITTING #############################
 # contains routines for circular linear regression

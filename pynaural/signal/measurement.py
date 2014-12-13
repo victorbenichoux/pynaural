@@ -3,6 +3,8 @@ from pynaural.signal.misc import ola_filter
 from pynaural.signal.impulseresponse import ImpulseResponse, dur2sample
 from pynaural.signal.sounds import Sound
 
+__all__ = ['deconvolve', 'swept_sine', 'excitation_signal']
+
 def deconvolve(signal, sweep):
     '''
     Deconvolves the second argument out of the first one.
