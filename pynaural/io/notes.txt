@@ -2,5 +2,6 @@ Contents of the pynaural.io package
 
 soundio.py
 	- load wav sounds, incl 24 bits, spherical, marker data from the zoom
+
 hrtfio.py
 	- load hrtf files 

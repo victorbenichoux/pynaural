@@ -1,5 +1,6 @@
 '''
 This script contains functions to load animals' HRTFs.
+Probably not relevant to the general public
 '''
 import pickle, re
 import numpy as np
