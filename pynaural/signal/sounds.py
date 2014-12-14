@@ -1,6 +1,7 @@
 import numpy as np
 import array as pyarray
 import time
+from scikits.audiolab.pysndfile._sndfile import Sndfile
 from pynaural.io.soundlib import get_default_audioserver
 from pynaural.utils.spatprefs import get_pref
 from matplotlib.pyplot import *
@@ -972,29 +973,11 @@ class Sound(np.ndarray):
         Load the file given by filename and returns a Sound object.
         Sound file can be either a .wav or a .aif file.
         '''
-        #TODO: add support for the other formats from io.sounds.sound_loaders
-        ext = filename.split('.')[-1].lower()
-        if ext=='wav':
-            import wave as sndmodule
-        elif ext=='aif' or ext=='aiff':
-            import aifc as sndmodule
-        else:
-            raise NotImplementedError('Can only load aif or wav soundfiles')
-        wav = sndmodule.open(filename, "r")
-        nchannels, sampwidth, framerate, nframes, comptype, compname = wav.getparams()
-        frames = wav.readframes(nframes * nchannels)
-        typecode = {2:'h', 1:'B'}[sampwidth]
-        out = np.frombuffer(frames, dtype=np.dtype(typecode))
-        scale = {2:2 ** 15, 1:2 ** 7-1}[sampwidth]
-        meanval = {2:0, 1:2**7}[sampwidth]
-
-        data = np.zeros((nframes, nchannels))
-        for i in range(nchannels):
-            data[:, i] = out[i::nchannels]
-            data[:, i] /= scale
-            data[:, i] -= meanval
-
-        return Sound(data, samplerate=framerate)
+        # using scikits.audiolab works most of the time...
+        f1 = Sndfile(filename, 'r')
+        samplerate = f1.samplerate
+        sound = f1.read_frames(f1.nframes)
+        return Sound(sound, samplerate = samplerate)
 
     def __repr__(self):
         arrayrep = repr(np.asarray(self))

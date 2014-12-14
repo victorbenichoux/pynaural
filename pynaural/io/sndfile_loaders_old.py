@@ -2,16 +2,10 @@
 Contains additional stuff to load sounds, mostly for the zoom, with support for the markers function
 original script, doc and such can be found in the Stuff/zoom marquage folder
 '''
-import wave, struct, os, time
+import wave, struct
+from pynaural.signal.sounds import Sound
 import numpy as np
-from matplotlib.pyplot import *
-from brian.hears import Sound, dB
-from brian.stdunits import Hz
-from scikits.audiolab import Sndfile
-import numpy as np
-import array as pyarray
 
-# TODO: Move to Sound.load
 def load_wave(filename):
     '''
     Load the file given by filename and returns a Sound object.
@@ -38,22 +32,7 @@ def load_wave(filename):
         data[:, i] /= scale
         data[:, i] -= meanval
 
-#    print nchannels, sampwidth, framerate
-#    print out.dtype
     return data, framerate
-
-def load_nist(fn):
-    '''
-    Load a NIST sphere WAV file, returns a Sound object
-	(uses scikits.audiolab)
-
-    fn : sound file name
-    '''
-    f1 = Sndfile(fn, 'r')
-    samplerate = f1.samplerate
-    sound = f1.read_frames(f1.nframes)
-    return Sound(sound, samplerate = samplerate*Hz)
-
 
 def load_wav24(fn):
     '''
@@ -71,10 +50,10 @@ def load_wav24(fn):
     data = np.array(data, dtype = 'double').reshape((nframes, nchannels))
     data -= 2**12
     data /= 2**23
-    return Sound(data, framerate * Hz)
+    return Sound(data, framerate)
 
 ############### ZOOM Marker data ######################
-# stuff to load marker position recorded using a ZOOM handheld recorder (and usually found in wav24 format
+# functions to load marker position recorded using a ZOOM handheld recorder (and usually found in wav24 format
 def readnumber(f):
     c = f.read(4)
     if len(c)<4:

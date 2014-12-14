@@ -1,12 +1,11 @@
 '''
-This script contains functions to load animals' HRTFs.
+This script contains functions to load the Qu HRTF database
 '''
 from spatializer import *
 import pickle, re
 import numpy as np
 import os, inspect
 from brian import *
-_, name, _, _, _ = os.uname()
 
 
 #################### QU database HRTFs ##################################

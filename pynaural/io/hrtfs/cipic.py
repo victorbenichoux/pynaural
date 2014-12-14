@@ -55,8 +55,7 @@ def load_CIPIC_subject(subject, folder = CIPICfolder,
     # fetch the HRIRs
     hrir_r = matfile['hrir_r']
     hrir_l = matfile['hrir_l']
-    
-    
+
     # prepare data structures    
     overall_shape = hrir_l.shape[0] * hrir_l.shape[1]
     print overall_shape

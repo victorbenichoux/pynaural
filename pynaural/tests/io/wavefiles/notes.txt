@@ -1,0 +1,3 @@
+lots of sample files of different formats there:
+http://www-mmsp.ece.mcgill.ca/documents/AudioFormats/WAVE/Samples.html
+
