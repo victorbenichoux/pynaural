@@ -715,10 +715,10 @@ class GroundScene(GeometricScene):
     outdoor = GroundScene(model = RigidReflectionModel(3*dB))
 
     '''
-    def __init__(self, mode = 'ground', stopcondition = None):
+    def __init__(self, mode = 'ground', stopcondition = None, model = {'alpha' : 1.}):
         if mode == 'ground':
             super(GroundScene, self).__init__(
-                [Plane(ORIGIN, UP)], stopcondition = 2)
+                [Plane(ORIGIN, UP, model = model)], stopcondition = 2)
             self.ground = self.surfaces[0]
         elif mode == 'wall':
             super(GroundScene, self).__init__([WALL], stopcondition = 2)
@@ -774,7 +774,7 @@ class RoomScene(GeometricScene):
     room = RoomScene(3*m, 4*m, 2.5*m)
     
     '''
-    def __init__(self, l, L, h, nreflections = 5, modeldict = {'alpha':0.01}):
+    def __init__(self, l, L, h, nreflections = 5, model = {'alpha':0.01}):
         self.nreflections = nreflections
         stopcondition = self.nreflections + 2
 
@@ -782,12 +782,12 @@ class RoomScene(GeometricScene):
         self.L = float(L)
         self.h = float(h)
 
-        self.leftwall = Plane(Point([-l/2., 0, 0]), RIGHT, label = 'left wall', model = modeldict)
-        self.rightwall = Plane(Point([l/2., 0, 0]), LEFT, label = 'right wall', model = modeldict)
-        self.backwall = Plane(Point([0, -L/2., 0]), FRONT, label = 'back wall', model = modeldict)
-        self.frontwall = Plane(Point([0., L/2., 0]), BACK, label = 'front wall', model = modeldict)
-        self.floor = Plane(Point([0, 0, 0]), UP, label = 'floor', model = modeldict)
-        self.ceiling = Plane(UP * h, DOWN, label = 'ceiling', model = modeldict)
+        self.leftwall = Plane(Point([-l/2., 0, 0]), RIGHT, label = 'left wall', model = model)
+        self.rightwall = Plane(Point([l/2., 0, 0]), LEFT, label = 'right wall', model = model)
+        self.backwall = Plane(Point([0, -L/2., 0]), FRONT, label = 'back wall', model = model)
+        self.frontwall = Plane(Point([0., L/2., 0]), BACK, label = 'front wall', model = model)
+        self.floor = Plane(Point([0, 0, 0]), UP, label = 'floor', model = model)
+        self.ceiling = Plane(UP * h, DOWN, label = 'ceiling', model = model)
         
         super(RoomScene, self).__init__([self.leftwall,self.rightwall,
                                          self.backwall,self.frontwall,
@@ -851,6 +851,7 @@ class RoomScene(GeometricScene):
                             i = i + 1
             res = res.cat(tmp)
         res.normalize()
+        log_debug('Casting %d rays' % res.nrays)
         return res
 
     # Geometrical Attributes

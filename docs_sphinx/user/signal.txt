@@ -1,0 +1,54 @@
+Signal processing
+=================
+
+This documentation deals with the basic geometrical objects in the spatializer
+
+.. toctree::
+
+Sounds
+-------------
+
+.. automodule:: pynaural.signal.sounds
+   :members:
+
+Impulse Responses and Transfer Functions
+----------------------------------------
+
+.. automodule:: pynaural.signal.impulseresponse
+   :members:
+
+Filterbanks
+----------------------------------------
+
+.. automodule:: pynaural.signal.filterbanks
+   :members:
+
+Filtering, etc.
+---------------
+
+.. automodule:: pynaural.signal.misc
+   :members:
+
+Fitting
+-------------
+
+.. automodule:: pynaural.signal.fitting
+   :members:
+
+Acoustic measurements
+-------------
+
+.. automodule:: pynaural.signal.measurement
+   :members:
+
+Smoothing
+-------------
+
+.. automodule:: pynaural.signal.smooting
+   :members:
+
+Bootstrapping
+-------------
+
+.. automodule:: pynaural.signal.bootstrapping
+   :members:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Spatializer documentation build configuration file, created by
+# Pynaural documentation build configuration file, created by
 # sphinx-quickstart on Tue Apr 23 14:42:26 2013.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -40,7 +40,7 @@ source_suffix = '.txt'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Spatializer'
+project = u'Pynaural'
 copyright = u'2013, Victor Benichoux'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -91,7 +91,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'agogo'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -164,7 +164,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Spatializerdoc'
+htmlhelp_basename = 'Pynauraldoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -183,7 +183,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Spatializer.tex', u'Spatializer Documentation',
+  ('index', 'Pynaural.tex', u'Pynaural Documentation',
    u'Victor Benichoux', 'manual'),
 ]
 
@@ -213,7 +213,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'spatializer', u'Spatializer Documentation',
+    ('index', 'Pynaural', u'Pynaural Documentation',
      [u'Victor Benichoux'], 1)
 ]
 
@@ -227,8 +227,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Spatializer', u'Spatializer Documentation',
-   u'Victor Benichoux', 'Spatializer', 'One line description of project.',
+  ('index', 'Pynaural', u'Pynaural Documentation',
+   u'Victor Benichoux', 'Pynaural', 'One line description of project.',
    'Miscellaneous'),
 ]
 

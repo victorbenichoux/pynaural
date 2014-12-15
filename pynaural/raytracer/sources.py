@@ -79,10 +79,10 @@ class Source(BaseSource, Sphere):
     '''
     Spherical Source, should be used instead of Source because
     otherwise numerical problems in raytracing arise.
-    reference distance is of 10cm.
+    reference distance is of 1cm.
     Initialized with a location.
     '''
-    def __init__(self, loc, ref = .1, model = None):
+    def __init__(self, loc, ref = .01, model = None):
         Sphere.__init__(self, loc, ref)
         self.model = model
         super(Source,self).__init__(loc)

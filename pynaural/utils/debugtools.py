@@ -53,8 +53,5 @@ def warning_level():
 level = eval('logging.%s' % 'DEBUG')
 logger = setup_logging(level)
 
-
-
-
 if __name__ == '__main__':
     log_debug("hello world")

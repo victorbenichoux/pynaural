@@ -12,12 +12,7 @@ model = DelayAttenuationModel(scene = scene)
 
 irs = model.apply(beam)
 
-#brir = receiver.collapse(irs)
-
-if False:
+if True:
     figure()
-    subplot(211)
     plot(irs)
-    subplot(212)
-    plot(brir)
-    show()
+    draw()

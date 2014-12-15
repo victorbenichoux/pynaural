@@ -1,4 +1,3 @@
-from brian.stdunits import kHz
 from scipy.io import loadmat
 import numpy as np
 from glob import glob
@@ -42,9 +41,9 @@ def ircamHRIR(subject, coordsfilter = None, path = None, compensated = False):
         if subject[0] == '3':
             # this is the case only for stuffed animals recordings
             # IRC_30..
-            samplerate = 192*kHz
+            samplerate = 192000.
         else:
-            samplerate = 44.1*kHz
+            samplerate = 44100.
         
         ### Beginning of code from the Brian ircam.py by Dan
         ok = False

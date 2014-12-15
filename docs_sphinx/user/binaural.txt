@@ -1,0 +1,14 @@
+Binaural
+=========
+
+This documentation deals with the binaural cues and models.
+
+
+.. automodule:: pynaural.binaural.binauralcues
+   :members:
+
+.. automodule:: pynaural.binaural.coherence
+   :members:
+
+.. automodule:: pynaural.binaural.sphericalmodel
+   :members:
