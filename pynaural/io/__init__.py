@@ -1,1 +1,1 @@
-__all__ = ['hrtfs', 'soundio', 'soundlib', 'sounds']
+__all__ = ['hrtfs', 'soundlib']

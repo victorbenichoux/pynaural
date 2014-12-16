@@ -6,7 +6,9 @@ import re, os
 import pynaural.signal.impulseresponse
 from pynaural.utils.spatprefs import get_pref
 
-__all__ = ['ircamHRIR', 'az_spat2ircam', 'az_ircam2spat']
+__all__ = ['ircamHRIR',
+            'az_spat2ircam',
+            'az_ircam2spat']
 
 def ircamHRIR(subject, coordsfilter = None, path = None, compensated = False):
         '''

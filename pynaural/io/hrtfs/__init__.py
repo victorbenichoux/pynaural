@@ -1,1 +1,2 @@
-__all__ = ['animals', 'ari', 'cipic', 'ircam', 'qu']
+from .ircam import *
+#__all__ = ['animals', 'ari', 'cipic', 'ircam', 'qu']
