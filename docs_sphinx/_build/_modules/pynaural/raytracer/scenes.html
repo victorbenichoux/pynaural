@@ -1,0 +1,993 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pynaural.raytracer.scenes &mdash; Pynaural 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pynaural 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <div class="headertitle"><a
+          href="../../../index.html">Pynaural 0.1 documentation</a></div>
+        <div class="rel">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pynaural.raytracer.scenes</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">pynaural.utils.debugtools</span> <span class="kn">import</span> <span class="n">log_debug</span>
+<span class="kn">from</span> <span class="nn">pynaural.raytracer.geometry.base</span> <span class="kn">import</span> <span class="n">FloatTriplet</span><span class="p">,</span> <span class="n">Point</span><span class="p">,</span> <span class="n">Vector</span><span class="p">,</span> <span class="n">FRONT</span><span class="p">,</span> <span class="n">BACK</span><span class="p">,</span> <span class="n">LEFT</span><span class="p">,</span> <span class="n">RIGHT</span><span class="p">,</span> <span class="n">UP</span><span class="p">,</span> <span class="n">DOWN</span><span class="p">,</span> <span class="n">ORIGIN</span>
+<span class="kn">from</span> <span class="nn">pynaural.raytracer.geometry.surfaces</span> <span class="kn">import</span> <span class="n">Plane</span><span class="p">,</span> <span class="n">Surface</span>
+<span class="kn">from</span> <span class="nn">pynaural.raytracer.geometry.rays</span> <span class="kn">import</span> <span class="n">Beam</span>
+<span class="kn">from</span> <span class="nn">pynaural.raytracer.sources</span> <span class="kn">import</span> <span class="n">Source</span>
+<span class="kn">from</span> <span class="nn">pynaural.raytracer.receivers</span> <span class="kn">import</span> <span class="n">Receiver</span>
+<span class="kn">from</span> <span class="nn">pynaural.raytracer.acoustics</span> <span class="kn">import</span> <span class="n">c</span>
+
+
+<span class="n">DEFAULT_PRECISION</span> <span class="o">=</span> <span class="mf">1e-5</span> <span class="c">#precision, to prevent self intersection, here 1cm</span>
+<span class="n">DEFAULT_STOPCONDITION</span> <span class="o">=</span> <span class="mi">30</span> <span class="c"># default number of reflections</span>
+<span class="n">DEFAULT_NRAYS</span> <span class="o">=</span> <span class="mf">1e6</span> <span class="c"># default number of rays</span>
+
+<span class="n">N_MAXREFLECTIONS</span> <span class="o">=</span> <span class="mf">10e5</span>
+<span class="n">MAX_ARRAY_SIZE</span> <span class="o">=</span> <span class="mi">5</span><span class="o">*</span><span class="mi">10</span><span class="o">**</span><span class="mi">6</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;GeometricScene&#39;</span><span class="p">,</span>
+           <span class="s">&#39;VoidScene&#39;</span><span class="p">,</span>
+           <span class="s">&#39;RoomScene&#39;</span><span class="p">,</span>
+           <span class="s">&#39;GroundScene&#39;</span><span class="p">]</span>
+
+<span class="c">#####################################################################################################</span>
+<span class="c">########################################## GEOMETRIC SCENE ##########################################</span>
+<span class="c">#####################################################################################################</span>
+
+<div class="viewcode-block" id="GeometricScene"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene">[docs]</a><span class="k">class</span> <span class="nc">GeometricScene</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class that encapsulates all the geometric data of a scene, and</span>
+<span class="sd">    takes care of the raytracing itself.</span>
+<span class="sd">    </span>
+<span class="sd">    GeometricScenes may contain any number of Surface and Source</span>
+<span class="sd">    objects. Those are used for raytracing a Beam through the</span>
+<span class="sd">    ``render`` method.</span>
+<span class="sd">    </span>
+<span class="sd">    The raytracing algorithm can be controlled in one of two ways: by</span>
+<span class="sd">    changing the stop condition, or by changing the precision</span>
+<span class="sd">    attribute.</span>
+<span class="sd">    </span>
+<span class="sd">    ** Initialization **</span>
+
+
+
+<span class="sd">    ``stopcondition = 30`` defines the stopcondition of the raytracing algorithm.</span>
+
+<span class="sd">    ``precision = 1e5`` defines the threshold of precision for</span>
+<span class="sd">    avoiding autointersection during raytracing. Due to numerical</span>
+<span class="sd">    (in)accuracy issues, sometimes a ray that just reflected on a</span>
+<span class="sd">    surface will come from the back of said surface and reintersect</span>
+<span class="sd">    it. That&#39;s why we use this threshold that prevents this by</span>
+<span class="sd">    forbidding any intersection with a surface closer than ``precision``</span>
+
+<span class="sd">    `` nrays`` Defines the default number of rays to be generated in</span>
+<span class="sd">    that scene (see get_beam)</span>
+<span class="sd">    </span>
+<span class="sd">    ** Object Management **</span>
+
+<span class="sd">    .. automethod:: add</span>
+<span class="sd">    .. autoattribute:: surfaces</span>
+<span class="sd">    .. autoattribute:: nsurfaces</span>
+<span class="sd">    .. autoattribute:: sources</span>
+<span class="sd">    .. autoattribute:: nsources</span>
+
+<span class="sd">    ** Raytracing ** </span>
+
+<span class="sd">    .. automethod :: render</span>
+
+<span class="sd">    .. autoattribute :: stopcondition</span>
+<span class="sd">    .. automethod :: set_stopcondition</span>
+
+<span class="sd">    .. autoattribute :: precision</span>
+
+<span class="sd">    ** Beam handling ** </span>
+
+<span class="sd">    .. automethod :: get_beam</span>
+<span class="sd">    .. automethod :: get_beam_onereceiver</span>
+
+<span class="sd">    ** Geometry **</span>
+<span class="sd">    </span>
+<span class="sd">    .. automethod :: volume</span>
+
+<span class="sd">    ** Misc. **</span>
+<span class="sd">    .. automethod :: plotsources</span>
+
+<span class="sd">    ** Acoustical measures **</span>
+
+<span class="sd">    .. automethod :: modedensity</span>
+<span class="sd">    .. automethod :: eyring</span>
+<span class="sd">    .. automethod :: sabine</span>
+<span class="sd">    .. automethod :: reflectionnumber</span>
+<span class="sd">    </span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objects</span><span class="p">,</span> <span class="n">stopcondition</span> <span class="o">=</span> <span class="n">DEFAULT_STOPCONDITION</span><span class="p">,</span> <span class="n">nrays</span> <span class="o">=</span> <span class="n">DEFAULT_NRAYS</span><span class="p">,</span> <span class="n">precision</span> <span class="o">=</span> <span class="n">DEFAULT_PRECISION</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_stopcondition</span><span class="p">(</span><span class="n">stopcondition</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nrays</span> <span class="o">=</span> <span class="n">nrays</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precision</span> <span class="o">=</span> <span class="n">precision</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nsurfaces</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sources</span> <span class="o">=</span> <span class="p">[]</span>        
+        <span class="bp">self</span><span class="o">.</span><span class="n">nsources</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">objects</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GeometricScene.add"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Adds the given object, or list of objects to the</span>
+<span class="sd">        GeometricScene. Objects may be either Sources or Surfaces.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+            <span class="k">return</span>
+
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Surface</span><span class="p">):</span>
+            <span class="n">obj</span><span class="o">.</span><span class="n">set_id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsurfaces</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nsurfaces</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Source</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_inside</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+                    <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Source may not be inside the Scene&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nsources</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">obj</span><span class="o">.</span><span class="n">set_id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsources</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsurfaces</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsources</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="k">return</span>
+        
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;Only Surface or Source objects may be added to a</span>
+<span class="sd">            scene, here &quot;&quot;&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)))</span>
+</div>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">res</span><span class="o">=</span><span class="s">&#39;SCENE</span><span class="se">\n</span><span class="s">  Surfaces:</span><span class="se">\n</span><span class="s">&#39;</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">:</span>
+            <span class="n">res</span><span class="o">+=</span><span class="nb">str</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">def</span> <span class="nf">preparesurfaces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nrays</span><span class="p">):</span>
+        <span class="c"># calls .prepare on all the surfaces. This prepares for the</span>
+        <span class="c"># hardcore vectorization of intersection...</span>
+        <span class="k">for</span> <span class="n">surf</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">:</span>
+            <span class="n">surf</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">nrays</span><span class="p">)</span>
+
+
+    <span class="c">########################## PLOTTING ##########################</span>
+
+<div class="viewcode-block" id="GeometricScene.plotsources"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.plotsources">[docs]</a>    <span class="k">def</span> <span class="nf">plotsources</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">display</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plots the sources in a 3D axes object. </span>
+
+<span class="sd">        ``display = False`` If set to True, then show() is called.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">projection</span> <span class="o">=</span> <span class="s">&#39;3d&#39;</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsources</span><span class="p">)</span>
+        <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsources</span><span class="p">)</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsources</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">source</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sources</span><span class="p">):</span>
+            <span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">)</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">tuple</span><span class="p">()</span>
+            <span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+            <span class="n">Y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span>
+            <span class="n">Z</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">z</span>
+
+        <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">Y</span><span class="p">,</span><span class="n">Z</span><span class="p">,</span> <span class="s">&#39;*y&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">display</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="c">########################## GEOMETRY ##########################</span>
+</div>
+    <span class="k">def</span> <span class="nf">compute_volume_areas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s">&#39;Niter&#39;</span> <span class="ow">in</span> <span class="n">kwdargs</span><span class="p">:</span>
+            <span class="n">Niter</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">kwdargs</span><span class="p">[</span><span class="s">&#39;Niter&#39;</span><span class="p">])</span>
+            <span class="k">del</span> <span class="n">kwdargs</span><span class="p">[</span><span class="s">&#39;Niter&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Niter</span> <span class="o">=</span> <span class="mf">1.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_volume</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_areas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsurfaces</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">Niter</span><span class="p">)):</span>
+            <span class="n">v</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_volume_areas_once</span><span class="p">(</span><span class="o">**</span><span class="n">kwdargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_volume</span> <span class="o">+=</span> <span class="n">v</span><span class="o">/</span><span class="n">Niter</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_areas</span> <span class="o">+=</span> <span class="n">a</span><span class="o">/</span><span class="n">Niter</span>
+
+<div class="viewcode-block" id="GeometricScene.compute_volume_areas_once"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.compute_volume_areas_once">[docs]</a>    <span class="k">def</span> <span class="nf">compute_volume_areas_once</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                                  <span class="n">ref_point</span> <span class="o">=</span> <span class="n">ORIGIN</span><span class="p">,</span> 
+                                  <span class="n">abs_max</span> <span class="o">=</span> <span class="mf">10.</span><span class="p">,</span> <span class="n">Npoints</span> <span class="o">=</span> <span class="mf">1e7</span><span class="p">,</span>
+                                  <span class="n">debug</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Monte Carlo method for estimation of the volumes and surface areas of an enclosed GeometricScene.</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Computing volumes and areas&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">abs_max</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">max_coords</span> <span class="o">=</span> <span class="n">abs_max</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">max_coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ref_point</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ref_point</span><span class="p">,</span> <span class="n">Receiver</span><span class="p">):</span>
+                <span class="n">ref_point</span> <span class="o">=</span> <span class="n">ref_point</span><span class="o">.</span><span class="n">position</span>
+            <span class="n">ref_point</span> <span class="o">=</span> <span class="n">ref_point</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+            
+            
+        <span class="c">## Volume estimation</span>
+        <span class="c"># compute total volume of the slab</span>
+        <span class="n">extent</span> <span class="o">=</span> <span class="n">max_coords</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">max_coords</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">vtot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">extent</span><span class="p">)</span>
+
+        <span class="c"># generate uniformly distributed points in the slab</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="n">Npoints</span><span class="p">))</span>
+        <span class="n">tmprand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">Npoints</span><span class="p">)</span>
+        <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">max_coords</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">tmprand</span><span class="o">*</span><span class="n">extent</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">ref_point</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">tmprand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">Npoints</span><span class="p">)</span>
+        <span class="n">points</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">max_coords</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">tmprand</span><span class="o">*</span><span class="n">extent</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">ref_point</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">tmprand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">Npoints</span><span class="p">)</span>
+        <span class="n">points</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">max_coords</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">tmprand</span><span class="o">*</span><span class="n">extent</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">ref_point</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c"># check which points are actually inside the volume</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_inside</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        <span class="n">n_inside</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">res</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>        
+
+        <span class="k">if</span> <span class="n">n_inside</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;No points were detected in a space&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n_inside</span> <span class="o">==</span> <span class="n">Npoints</span><span class="p">:</span>
+            <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;All points were generated in the space, try using a bigger slab&#39;</span><span class="p">)</span>
+
+        <span class="c"># and guess the volume</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_inside</span><span class="p">)</span><span class="o">/</span><span class="n">Npoints</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="n">p</span><span class="o">*</span><span class="n">vtot</span>
+
+        <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">projection</span> <span class="o">=</span> <span class="s">&#39;3d&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">res</span><span class="p">],</span><span class="n">points</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">res</span><span class="p">],</span> <span class="n">points</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="n">res</span><span class="p">],</span> <span class="n">color</span> <span class="o">=</span> <span class="s">&#39;g&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="n">res</span><span class="p">],</span><span class="n">points</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="n">res</span><span class="p">],</span> <span class="n">points</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="n">res</span><span class="p">],</span> <span class="n">color</span> <span class="o">=</span> <span class="s">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        
+
+        <span class="c">## Surfaces estimation</span>
+        <span class="c"># This here is a bit tricky. to estimate the surfaces</span>
+        <span class="c"># we displace the points generated in the volume following the</span>
+        <span class="c"># normal of the considered surface. We can then guess the</span>
+        <span class="c"># area of that surface by how many points are now outside the room!</span>
+        <span class="n">in_points</span> <span class="o">=</span> <span class="n">points</span><span class="p">[:,</span><span class="n">res</span><span class="p">]</span>
+        <span class="c"># we have to figure out the magnitude of the shift (alpha), </span>
+        <span class="n">density</span> <span class="o">=</span> <span class="n">n_inside</span><span class="o">/</span><span class="n">volume</span>
+        <span class="c"># say we want to lose 10 percent of the points, </span>
+        <span class="n">frac</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span>
+        <span class="c"># since we expect the surface to be about (if its square)</span>
+        <span class="n">expected_surf</span> <span class="o">=</span> <span class="p">(</span><span class="n">volume</span> <span class="o">**</span> <span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="mi">3</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span>
+        <span class="c"># so the expected shift to lose frac*n_inside points is</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">frac</span><span class="o">*</span><span class="n">n_inside</span><span class="o">/</span><span class="p">(</span><span class="n">density</span><span class="o">*</span><span class="n">expected_surf</span><span class="p">)</span>
+        <span class="c"># we&#39;ll use that value for shifts</span>
+        <span class="n">areas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsurfaces</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">surface</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">):</span>
+            <span class="c"># only works with planes</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">Plane</span><span class="p">):</span>
+                <span class="c"># we take all the points inside the volume, and </span>
+                <span class="c"># shift them by -alpha * normal, </span>
+                <span class="n">shift</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="o">-</span><span class="n">surface</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_inside</span><span class="p">))</span>
+                <span class="n">shifted</span> <span class="o">=</span> <span class="n">in_points</span> <span class="o">+</span> <span class="n">alpha</span><span class="o">*</span><span class="n">shift</span>
+                <span class="c"># figure out how many we lost, that is how many</span>
+                <span class="c"># crossed this surface</span>
+                <span class="n">still_inside</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">is_in_updomain</span><span class="p">(</span><span class="n">shifted</span><span class="p">)</span>
+<span class="c">#                still_inside = self.is_inside(shifted)</span>
+                <span class="c"># the fraction </span>
+                <span class="n">frac_displaced</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">still_inside</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))</span><span class="o">/</span><span class="n">n_inside</span>
+                <span class="c"># the lost volume</span>
+                <span class="n">volume_lost</span> <span class="o">=</span> <span class="n">frac_displaced</span> <span class="o">*</span> <span class="n">volume</span>
+                <span class="k">if</span> <span class="bp">False</span><span class="p">:</span>
+                    <span class="c"># debug</span>
+                    <span class="k">print</span> <span class="s">&#39;frac&#39;</span><span class="p">,</span> <span class="n">frac_displaced</span>
+                    <span class="k">print</span> <span class="s">&#39;volume_lost&#39;</span><span class="p">,</span><span class="n">volume_lost</span>
+                    <span class="k">print</span> <span class="s">&#39;alpha&#39;</span><span class="p">,</span><span class="n">alpha</span>
+                <span class="c"># hence the surface!</span>
+                <span class="n">areas</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">volume_lost</span><span class="o">/</span><span class="n">alpha</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">Source</span><span class="p">):</span>
+                    <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Can only compute surfaces of planes&#39;</span><span class="p">)</span>    
+                <span class="n">areas</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">volume</span><span class="p">,</span> <span class="n">areas</span>
+</div>
+<div class="viewcode-block" id="GeometricScene.volume"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.volume">[docs]</a>    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Estimates the volume of the enclosed space in the</span>
+<span class="sd">        GeometricScene around the ref_point using a monte carlo method.</span>
+
+<span class="sd">        More precisely, draws Npoints random points within the slab</span>
+<span class="sd">        centered on ref_point, with coordinates within abs_max of this</span>
+<span class="sd">        points. Then evaluates the volume by testing whether or not</span>
+<span class="sd">        each point is in the closed space around the reference point. </span>
+<span class="sd">        </span>
+<span class="sd">        Keyword arguments:</span>
+<span class="sd">        </span>
+<span class="sd">        ``abs_max = 10`` Can be a (3x2) ndarray with min/max values</span>
+<span class="sd">        along each dimension, or just a single value that defines the</span>
+<span class="sd">        maximum absolute value of the generate coordinates</span>
+
+<span class="sd">        ``Npoints = 1e7`` Defines the number of points to generate, a</span>
+<span class="sd">        higher value may lead to more precise estimation, but too high</span>
+<span class="sd">        values raise a MemoryError.</span>
+<span class="sd">        </span>
+<span class="sd">        ``Niter = 1`` If set to more than one then the volume</span>
+<span class="sd">        computations is run Niter times and averaged.</span>
+<span class="sd">        </span>
+<span class="sd">        ``ref_point = ORIGIN`` Volume will be measured around the</span>
+<span class="sd">        point ref_point.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;_volume&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwdargs</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compute_volume_areas</span><span class="p">(</span><span class="o">**</span><span class="n">kwdargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_volume</span>
+    </div>
+<div class="viewcode-block" id="GeometricScene.area"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.area">[docs]</a>    <span class="k">def</span> <span class="nf">area</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the surface of the i&#39;th Surface object in the</span>
+<span class="sd">        scene. It is computed alongside the volume using a Monte Carlo method.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;_volume&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwdargs</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compute_volume_areas</span><span class="p">(</span><span class="o">**</span><span class="n">kwdargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">Surface</span><span class="p">):</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">i</span><span class="o">.</span><span class="n">id</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_areas</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+</div>
+    <span class="k">def</span> <span class="nf">total_enclosure_area</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;_volume&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwdargs</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compute_volume_areas</span><span class="p">(</span><span class="o">**</span><span class="n">kwdargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsurfaces</span><span class="p">)])</span>
+
+<div class="viewcode-block" id="GeometricScene.is_inside"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.is_inside">[docs]</a>    <span class="k">def</span> <span class="nf">is_inside</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Method to tell whether an object is inside a convex scene or</span>
+<span class="sd">        not. It may not work for non-convex geometries.</span>
+<span class="sd">        </span>
+<span class="sd">        `` obj`` may be any object with a ``position`` attribute, or a</span>
+<span class="sd">        (3xn) ndarray, or a Vector/Point.</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s">&#39;position&#39;</span><span class="p">):</span>
+            <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">position</span>
+            
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Vector</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Point</span><span class="p">):</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="n">obj</span>
+            
+        <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">points</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">surface</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">Source</span><span class="p">):</span>
+                <span class="n">tmp</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">is_in_updomain</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+                <span class="n">res</span> <span class="o">*=</span> <span class="n">tmp</span>
+        <span class="k">return</span> <span class="n">res</span>
+        
+        
+    
+    <span class="c">########################## STOP CONDITION ##########################</span></div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="GeometricScene.stopcondition"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.stopcondition">[docs]</a>    <span class="k">def</span> <span class="nf">stopcondition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the current value of the stop condition.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopcondition_value</span>
+</div>
+<div class="viewcode-block" id="GeometricScene.set_stopcondition"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.set_stopcondition">[docs]</a>    <span class="k">def</span> <span class="nf">set_stopcondition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Sets the stop condition of the raytracing algorithm to the</span>
+<span class="sd">        value given as an argument. If the value is an integer, then</span>
+<span class="sd">        the stop condition will be the maximum number of reflections</span>
+<span class="sd">        computed. Otherwise, it is the longest time-of-flight of the rays.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="c">## the stop condition is specified as a number of reflections.</span>
+            <span class="k">def</span> <span class="nf">intStopCondition</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">distances</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">n</span> <span class="o">&lt;</span> <span class="n">val</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">distances</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stopcondition_value</span> <span class="o">=</span> <span class="n">val</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_stopcondition</span> <span class="o">=</span> <span class="n">intStopCondition</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c">## the stop condition is specified as a time of flight.</span>
+            <span class="n">val</span> <span class="o">*=</span> <span class="n">c</span>
+            <span class="k">def</span> <span class="nf">distanceStopCondition</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">distances</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">n</span> <span class="o">&lt;</span> <span class="n">N_MAXREFLECTIONS</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">distances</span> <span class="o">&lt;</span> <span class="n">val</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stopcondition_value</span> <span class="o">=</span> <span class="n">val</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_stopcondition</span> <span class="o">=</span> <span class="n">distanceStopCondition</span>
+
+    <span class="c">########################## BEAM HANDLING ############################</span>
+</div>
+<div class="viewcode-block" id="GeometricScene.get_beam"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.get_beam">[docs]</a>    <span class="k">def</span> <span class="nf">get_beam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">nrays</span> <span class="o">=</span> <span class="n">DEFAULT_NRAYS</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a Beam object originating at a given 3D position and all the</span>
+<span class="sd">        sources in the GeometricScene.</span>
+<span class="sd">        </span>
+<span class="sd">        ``nrays = 1e5`` Defines the number of rays to be generated per</span>
+<span class="sd">        couple (receiver, source). Note: This is ignored when the rays</span>
+<span class="sd">        are known exactly (see SquareRoomScene for example).</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="n">beam</span> <span class="o">=</span> <span class="n">Beam</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">FloatTriplet</span><span class="p">):</span>
+            <span class="n">position</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">position</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">position</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        
+        <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sources</span><span class="p">:</span>
+            <span class="n">cur_nrays</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">nrays</span><span class="p">)</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">nsources</span>
+            <span class="n">beam</span> <span class="o">=</span> <span class="n">beam</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">RandomSphericalBeam</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> 
+                                                <span class="nb">int</span><span class="p">(</span><span class="n">cur_nrays</span><span class="p">),</span>
+                                                <span class="n">target_source</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">beam</span>        
+</div>
+<div class="viewcode-block" id="GeometricScene.render"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Raytracing algorithm. </span>
+
+<span class="sd">        ``obj`` Defines on which object to do the rendering. </span>
+<span class="sd">        For Receiver inputs, the Scene decides</span>
+<span class="sd">        which Beam to generate, generates one beam for all source objects</span>
+<span class="sd">        and renders it.</span>
+<span class="sd">        If ``obj`` is a beam, then the beam is rendered in the scene and</span>
+<span class="sd">        returned.</span>
+
+<span class="sd">        Keyword Arguments:</span>
+
+<span class="sd">        ``cpu = 1`` If set to more than 1 the algorithm will be</span>
+<span class="sd">        distributed across CPUs using playdoh. (experimental)</span>
+<span class="sd">        </span>
+<span class="sd">        ``debug = False`` If set to True, will be *very* verbose.</span>
+<span class="sd">        </span>
+<span class="sd">        ``nrays = None`` passed to get_beam.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Receiver</span><span class="p">):</span>
+            <span class="n">beam</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_beam</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Beam</span><span class="p">):</span>
+            <span class="n">beam</span> <span class="o">=</span> <span class="n">obj</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&quot;Doesn&#39;t recognize given Beam/Receiver for rendering&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_render</span><span class="p">(</span><span class="n">beam</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">)</span>
+
+</div>
+    <span class="k">def</span> <span class="nf">_render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="c"># this function is just a wrapper for the _renderstep method</span>
+        <span class="c"># where the raytracing actually happens. her</span>
+
+        <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Preparing surfaces for &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">)</span><span class="o">+</span><span class="s">&#39; rays&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">preparesurfaces</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">)</span>
+        
+        <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Starting simulation&#39;</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_renderstep</span><span class="p">(</span><span class="n">beam</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">)</span>
+
+        <span class="n">reached_source</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">get_reachedsource</span><span class="p">())[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">log_debug</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">reached_source</span><span class="o">.</span><span class="n">nrays</span><span class="p">)</span><span class="o">/</span><span class="n">out</span><span class="o">.</span><span class="n">nrays</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;</span><span class="si">% o</span><span class="s">f rays reached the source (&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">reached_source</span><span class="o">.</span><span class="n">nrays</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;)&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+                    
+    <span class="k">def</span> <span class="nf">_renderstep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="c"># here is where the magic happens. it&#39;s a bit complicated, but</span>
+        <span class="c"># intuitively it&#39;s straightforward. i&#39;ll try to comment you</span>
+        <span class="c"># through it, dear (crazy) reader.</span>
+
+        <span class="n">debug</span> <span class="o">=</span> <span class="n">kwdargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;debug&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+        <span class="n">exp_parallel</span> <span class="o">=</span> <span class="n">kwdargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;exp_parallel&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+        
+        <span class="c"># active rays match 3 properties:</span>
+        <span class="c"># - they aren&#39;t going away to infinity (its what surfacehit ==</span>
+        <span class="c"># inf means)</span>
+        <span class="c"># - they haven&#39;t reached their source</span>
+        <span class="c"># - they match the stopcondition</span>
+        <span class="n">active_rays</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">surfacehit</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span>
+                <span class="n">beam</span><span class="o">.</span><span class="n">sourcereached</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stopcondition</span><span class="p">(</span><span class="n">n</span><span class="p">,</span>
+                                                          <span class="n">beam</span><span class="o">.</span><span class="n">traveleddistance</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">propactive</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">active_rays</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">))</span>
+        <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Step &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;, &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">propactive</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;</span><span class="si">% r</span><span class="s">ays reached the source&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">active_rays</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c"># computing all the distances</span>
+            <span class="n">dists</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">),</span> <span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">Source</span><span class="p">):</span>
+                    <span class="c"># if it has reached its source, (or if source is</span>
+                    <span class="c"># undefined = -1)</span>
+                    <span class="n">condition</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">beam</span><span class="o">.</span><span class="n">target_source</span> <span class="o">==</span> <span class="n">i</span><span class="p">),</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">beam</span><span class="o">.</span><span class="n">target_source</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">)</span>
+                    <span class="n">curr_target_rays</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">condition</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">surfacehit</span><span class="p">)</span> <span class="o">*</span> <span class="o">-</span> <span class="n">beam</span><span class="o">.</span><span class="n">sourcereached</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="c"># keep track of the distances</span>
+                    <span class="n">dists</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">curr_target_rays</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">beam</span><span class="p">[</span><span class="n">curr_target_rays</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c"># keep track of the distances</span>
+                    <span class="n">dists</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">active_rays</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">beam</span><span class="p">[</span><span class="n">active_rays</span><span class="p">])</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">dists</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                    <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;WARNING, negative distances ?&#39;</span><span class="p">)</span>
+                    <span class="k">print</span> <span class="n">dists</span><span class="p">[</span><span class="n">dists</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="c"># distance correction</span>
+            <span class="n">dists</span> <span class="o">=</span> <span class="n">correct_dists</span><span class="p">(</span><span class="n">dists</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision</span><span class="p">)</span>
+            <span class="c"># minimum distances along the columns</span>
+            <span class="n">mindists</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">dists</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="c"># not infinite distance means something was hit</span>
+            <span class="n">notinf_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">mindists</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c"># what was hit?</span>
+            <span class="n">intersurfs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">dists</span><span class="p">[:,</span> <span class="n">notinf_idx</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&#39;DEBUG, step &#39;</span><span class="p">,</span><span class="n">n</span>
+                <span class="k">print</span> <span class="s">&#39;active_rays: &#39;</span><span class="p">,</span><span class="n">active_rays</span>
+                <span class="k">print</span> <span class="s">&#39;dists: &#39;</span><span class="p">,</span><span class="n">dists</span>
+                <span class="k">print</span> <span class="s">&#39;mindists: &#39;</span><span class="p">,</span><span class="n">mindists</span>
+                <span class="k">print</span> <span class="s">&#39;notinf_idx: &#39;</span><span class="p">,</span><span class="n">notinf_idx</span>
+                <span class="k">print</span> <span class="s">&#39;intersurfs: &#39;</span><span class="p">,</span><span class="n">intersurfs</span>
+
+            
+            <span class="c"># starting to create following beam</span>
+            <span class="n">beam</span><span class="o">.</span><span class="n">surfacehit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">int</span><span class="p">)</span>
+            <span class="nb">next</span> <span class="o">=</span> <span class="n">Beam</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">)</span>
+            <span class="nb">next</span><span class="o">.</span><span class="n">directions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">))</span> <span class="c"># no more intersection</span>
+            <span class="nb">next</span><span class="o">.</span><span class="n">origins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="n">beam</span><span class="o">.</span><span class="n">nrays</span><span class="p">))</span> <span class="c"># no more intersection</span>
+            <span class="c"># those attributes transfer down the list</span>
+            <span class="nb">next</span><span class="o">.</span><span class="n">sourcereached</span> <span class="o">=</span> <span class="n">beam</span><span class="o">.</span><span class="n">sourcereached</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="nb">next</span><span class="o">.</span><span class="n">surfacehit</span> <span class="o">=</span> <span class="n">beam</span><span class="o">.</span><span class="n">surfacehit</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">surface</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">):</span>
+                <span class="c"># now, for every surface, who hit it?</span>
+                <span class="n">subbeam_idx</span> <span class="o">=</span> <span class="n">notinf_idx</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">intersurfs</span> <span class="o">==</span> <span class="n">i</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">subbeam_idx</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
+                    <span class="c"># if someone has...</span>
+                    <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+                        <span class="k">print</span> <span class="s">&#39;surface &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">+</span><span class="s">&#39; was hit, by rays &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">subbeam_idx</span><span class="p">)</span>
+                    <span class="n">surface</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">beam</span><span class="o">.</span><span class="n">surfacehit</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+                    <span class="n">beam</span><span class="o">.</span><span class="n">distances</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dists</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">subbeam_idx</span><span class="p">]</span>
+                    <span class="n">intersectionpoints</span> <span class="o">=</span> <span class="n">beam</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span><span class="o">.</span><span class="n">atDist</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">distances</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">])</span>
+                    <span class="n">beam</span><span class="o">.</span><span class="n">incidences</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">get_incidence</span><span class="p">(</span>
+                        <span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="n">subbeam_idx</span><span class="p">],</span> 
+                        <span class="n">intersectionpoints</span><span class="p">)</span>
+                    <span class="c"># geometric computation</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">Source</span><span class="p">):</span>
+                        <span class="c"># if it was a source, remember it...</span>
+                        <span class="nb">next</span><span class="o">.</span><span class="n">sourcereached</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+                        <span class="nb">next</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span> <span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                        <span class="nb">next</span><span class="o">.</span><span class="n">origins</span><span class="p">[:,</span> <span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">intersectionpoints</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c"># if not reflect it...</span>
+                        <span class="n">reflected_beam</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">reflect</span><span class="p">(</span>
+                            <span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="n">subbeam_idx</span><span class="p">],</span>
+                            <span class="n">intersectionpoints</span><span class="p">)</span>
+                        <span class="nb">next</span><span class="o">.</span><span class="n">sourcereached</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+                        <span class="nb">next</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">reflected_beam</span><span class="o">.</span><span class="n">directions</span>
+                        <span class="nb">next</span><span class="o">.</span><span class="n">origins</span><span class="p">[:,</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">reflected_beam</span><span class="o">.</span><span class="n">origins</span>
+                        <span class="nb">next</span><span class="o">.</span><span class="n">target_source</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam</span><span class="o">.</span><span class="n">target_source</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span>
+                    <span class="c"># in any event, keep the traveleddistance</span>
+                    <span class="nb">next</span><span class="o">.</span><span class="n">traveleddistance</span><span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam</span><span class="o">.</span><span class="n">traveleddistance</span> <span class="p">[</span><span class="n">subbeam_idx</span><span class="p">]</span> <span class="o">+</span> <span class="n">dists</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">subbeam_idx</span><span class="p">]</span>
+            <span class="c"># make sure that the output Beam has its directions normalized        </span>
+            <span class="nb">next</span><span class="o">.</span><span class="n">normalize</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&#39;next beam&#39;</span>
+                <span class="k">print</span> <span class="s">&#39;origins:&#39;</span><span class="p">,</span><span class="nb">next</span><span class="o">.</span><span class="n">origins</span>
+                <span class="k">print</span> <span class="s">&#39;directions:&#39;</span><span class="p">,</span><span class="nb">next</span><span class="o">.</span><span class="n">directions</span>
+                <span class="k">print</span> <span class="s">&#39;sourcereached:&#39;</span><span class="p">,</span><span class="nb">next</span><span class="o">.</span><span class="n">sourcereached</span>
+                <span class="k">print</span> <span class="s">&#39;surfacehit:&#39;</span><span class="p">,</span> <span class="n">beam</span><span class="o">.</span><span class="n">surfacehit</span>
+            <span class="c"># chain it! pfiou...</span>
+            <span class="n">beam</span><span class="o">.</span><span class="n">next</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_renderstep</span><span class="p">(</span><span class="nb">next</span><span class="p">,</span> <span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                                         <span class="n">precision</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision</span><span class="p">,</span> <span class="n">debug</span> <span class="o">=</span> <span class="n">debug</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;No more active rays, stopping render&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">beam</span>
+    
+
+    <span class="c">###################### ACOUSTICAL MEASURES ######################</span>
+
+<div class="viewcode-block" id="GeometricScene.modedensity"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.modedensity">[docs]</a>    <span class="k">def</span> <span class="nf">modedensity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">freq</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Computes the mode density ratio, ie deltaN/deltaf, the number</span>
+<span class="sd">        of modes per bandwidth of the room (intr.acous. p 111) at a</span>
+<span class="sd">        given frequency. </span>
+<span class="sd">        </span>
+<span class="sd">        NB: </span>
+<span class="sd">        - approx, works for high freqs with regards to f0</span>
+<span class="sd">        - homogene a un temps</span>
+<span class="sd">        </span>
+<span class="sd">        For a sound that lasts t0, with fundamental at f0, one must</span>
+<span class="sd">        find about 10 modes in the frequency band centered around f0</span>
+<span class="sd">        of width 2*pi/t0.</span>
+<span class="sd">        That is the number of modes for a signal defined as up, in a</span>
+<span class="sd">        band of width deltaf is:</span>
+<span class="sd">        room.modedensity(f)*deltaf</span>
+<span class="sd">        for the sound to be intelligible, one must have</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">        - wtf?</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="mi">4</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="o">*</span><span class="n">freq</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">c</span><span class="o">**-</span><span class="mi">3</span>
+    </div>
+<div class="viewcode-block" id="GeometricScene.modes"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.modes">[docs]</a>    <span class="k">def</span> <span class="nf">modes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bound</span> <span class="o">=</span> <span class="mf">1000.</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Computes the possible room mode frequencies up to a certain</span>
+<span class="sd">        ``bound`` (in Hz) given as an argument.</span>
+<span class="sd">        </span>
+<span class="sd">        Note that since there are a huge number of room modes in high</span>
+<span class="sd">        frequencies, imposing a high bound (more than a few kHz) will</span>
+<span class="sd">        most likely raise a MemoryError.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">while</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">*=</span> <span class="mi">2</span>
+            <span class="n">combinations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">((</span><span class="n">n</span><span class="p">)</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+            <span class="n">nL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">combinations</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+            <span class="n">nl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">combinations</span> <span class="o">-</span> <span class="n">nL</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="n">n</span>
+            <span class="n">nh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">combinations</span> <span class="o">-</span> <span class="n">nl</span><span class="o">*</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">-</span> <span class="n">nL</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">n</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">freqs</span> <span class="o">=</span> <span class="p">(</span><span class="n">c</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="p">((</span><span class="n">nL</span><span class="o">/</span><span class="n">L</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>  <span class="o">+</span> <span class="p">(</span><span class="n">nl</span><span class="o">/</span><span class="n">l</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">nh</span><span class="o">/</span><span class="n">h</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">**.</span><span class="mi">5</span>
+            <span class="n">goodfreqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">freqs</span> <span class="o">&lt;=</span> <span class="n">bound</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">goodfreqs</span><span class="p">)</span> <span class="o">==</span> <span class="n">tmp</span><span class="p">:</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="n">goodfreqs</span><span class="p">]</span>
+            <span class="k">print</span> <span class="s">&#39;max&#39;</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">goodfreqs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">freqs</span>
+</div>
+<div class="viewcode-block" id="GeometricScene.reflectionnumber"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.reflectionnumber">[docs]</a>    <span class="k">def</span> <span class="nf">reflectionnumber</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the number of reflections expected in a rectangular</span>
+<span class="sd">        hall before time t.</span>
+<span class="sd">        Follows the formula 2pi(ct)**3/(3V) (Dalenback 96, ref12)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="mi">4</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="n">c</span><span class="o">*</span><span class="n">t</span><span class="p">)</span><span class="o">**</span><span class="mi">3</span><span class="o">/</span><span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">())</span>
+    </div>
+<div class="viewcode-block" id="GeometricScene.sabine"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.sabine">[docs]</a>    <span class="k">def</span> <span class="nf">sabine</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Evaluates Sabine&#39;s formula (RT60) for the current scene.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;_volume&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compute_volume_areas</span><span class="p">(</span><span class="o">**</span><span class="p">{})</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s">&#39;alpha&#39;</span><span class="p">]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsurfaces</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="mf">0.161</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">()</span><span class="o">/</span><span class="n">tmp</span>
+    </div>
+<div class="viewcode-block" id="GeometricScene.eyring"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GeometricScene.eyring">[docs]</a>    <span class="k">def</span> <span class="nf">eyring</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Evaluates Eyring&#39;s formula (RT60) for the current scene.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;_volume&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compute_volume_areas</span><span class="p">(</span><span class="o">**</span><span class="p">{})</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="s">&#39;alpha&#39;</span><span class="p">]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsurfaces</span><span class="p">)])</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_enclosure_area</span><span class="p">()</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="o">-</span><span class="n">S</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">tmp</span><span class="o">/</span><span class="n">S</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mf">0.161</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">()</span><span class="o">/</span><span class="n">tmp</span>
+
+
+<span class="c">#####################################################################################################</span>
+<span class="c">########################################## GEOMETRIC SCENE ##########################################</span>
+<span class="c">#####################################################################################################</span>
+  
+<span class="c">###################### VoidScene ######################</span>
+</div></div>
+<div class="viewcode-block" id="VoidScene"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.VoidScene">[docs]</a><span class="k">class</span> <span class="nc">VoidScene</span><span class="p">(</span><span class="n">GeometricScene</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class to work in anechoic environments.</span>
+<span class="sd">    </span>
+<span class="sd">    In this setting the environment impulse response will aways be dirac-like.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">VoidScene</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">stopcondition</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_stopcondition</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_beam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="o">**</span><span class="n">kwdargs</span><span class="p">):</span>
+        <span class="c"># Here the beam is known exactly</span>
+        <span class="n">beam</span> <span class="o">=</span> <span class="n">Beam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsources</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">Point</span><span class="p">):</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">pos</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">beam</span><span class="o">.</span><span class="n">origins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsources</span><span class="p">))</span>
+        <span class="n">sourcepos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">sources</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsources</span><span class="p">)]))</span>
+        <span class="c"># beam towards the source (direct)</span>
+        <span class="n">beam</span><span class="o">.</span><span class="n">directions</span> <span class="o">=</span> <span class="n">sourcepos</span> <span class="o">-</span> <span class="n">pos</span><span class="c">#).squeeze()</span>
+        <span class="n">beam</span><span class="o">.</span><span class="n">directions</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">beam</span><span class="o">.</span><span class="n">target_source</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">source</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sources</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">beam</span>
+
+    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s">&#39;Volume is infinite for a VoideScene&#39;</span><span class="p">)</span>
+      
+<span class="c">###################### GroundScene ######################</span>
+    </div>
+<div class="viewcode-block" id="GroundScene"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.GroundScene">[docs]</a><span class="k">class</span> <span class="nc">GroundScene</span><span class="p">(</span><span class="n">GeometricScene</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class to work with simple settings in which only a ground/wall is present.</span>
+
+<span class="sd">    The environment is modeled using a single plane, with arbitrary</span>
+<span class="sd">    model. </span>
+
+<span class="sd">    ** Initialization ** </span>
+<span class="sd">    </span>
+<span class="sd">    ``mode = &#39;ground&#39;`` By default the Plane object added to the Scene</span>
+<span class="sd">    is GROUND, that is the plane at z = 0, one can set this mode to</span>
+<span class="sd">    WALL in which case the wall is placed at x = 0, facing right.</span>
+
+
+<span class="sd">    ** Sample usage **</span>
+<span class="sd">    </span>
+<span class="sd">    To model a simple situation where the ground absorbs 3dB of</span>
+<span class="sd">    signal, one can do:</span>
+<span class="sd">    </span>
+<span class="sd">    outdoor = GroundScene(model = RigidReflectionModel(3*dB))</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;ground&#39;</span><span class="p">,</span> <span class="n">stopcondition</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;alpha&#39;</span> <span class="p">:</span> <span class="mf">1.</span><span class="p">}):</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;ground&#39;</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">GroundScene</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">Plane</span><span class="p">(</span><span class="n">ORIGIN</span><span class="p">,</span> <span class="n">UP</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="p">)],</span> <span class="n">stopcondition</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ground</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;wall&#39;</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">GroundScene</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">([</span><span class="n">WALL</span><span class="p">],</span> <span class="n">stopcondition</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wall</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="k">def</span> <span class="nf">get_beam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">nrays</span> <span class="o">=</span> <span class="n">DEFAULT_NRAYS</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">FloatTriplet</span><span class="p">):</span>
+            <span class="n">position</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">position</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">position</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+
+        <span class="c"># Here the beam is known exactly</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">Beam</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsources</span><span class="p">):</span>
+            <span class="n">beam</span> <span class="o">=</span> <span class="n">Beam</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">beam</span><span class="o">.</span><span class="n">set_target</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sources</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            
+
+            
+            <span class="n">beam</span><span class="o">.</span><span class="n">origins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">sourcepos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sources</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+            <span class="c"># first beam towards the source (direct)</span>
+            <span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">sourcepos</span> <span class="o">-</span> <span class="n">position</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+            <span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+            <span class="c"># second beam towards the virtual source (reflected)</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">Beam</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">origins</span> <span class="o">=</span> <span class="n">sourcepos</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">directions</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">ground</span><span class="o">.</span><span class="n">normal_at</span><span class="p">(</span><span class="n">tmp</span><span class="o">.</span><span class="n">origins</span><span class="p">)</span>
+            <span class="n">dh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ground</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+            <span class="n">sprime</span> <span class="o">=</span> <span class="n">tmp</span><span class="o">.</span><span class="n">atDist</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">dh</span><span class="p">)</span>
+            <span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">sprime</span> <span class="o">-</span> <span class="n">position</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+            <span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">beam</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">beam</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s">&#39;Volume is infinite for a GroundScene&#39;</span><span class="p">)</span>
+
+
+<span class="c">###################### Room Scene ###################</span>
+</div>
+<div class="viewcode-block" id="RoomScene"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.RoomScene">[docs]</a><span class="k">class</span> <span class="nc">RoomScene</span><span class="p">(</span><span class="n">GeometricScene</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class for working with rectangular room shapes.</span>
+<span class="sd">    </span>
+<span class="sd">    It creates a cuboid-shaped acoustic scene, the ground being the z = 0 plane, with the origin in the middle of the ground. The computations are much faster here since they are base on the image method described in the 1979 Allen and Berkley paper (&quot;Image Method for Efficiently Simulating Small-room Acoustics&quot;).</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+
+<span class="sd">    ** Sample usage ** </span>
+<span class="sd">    </span>
+<span class="sd">    room = RoomScene(3*m, 4*m, 2.5*m)</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nreflections</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;alpha&#39;</span><span class="p">:</span><span class="mf">0.01</span><span class="p">}):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nreflections</span> <span class="o">=</span> <span class="n">nreflections</span>
+        <span class="n">stopcondition</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nreflections</span> <span class="o">+</span> <span class="mi">2</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">l</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">L</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">h</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">leftwall</span> <span class="o">=</span> <span class="n">Plane</span><span class="p">(</span><span class="n">Point</span><span class="p">([</span><span class="o">-</span><span class="n">l</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="n">RIGHT</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s">&#39;left wall&#39;</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rightwall</span> <span class="o">=</span> <span class="n">Plane</span><span class="p">(</span><span class="n">Point</span><span class="p">([</span><span class="n">l</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="n">LEFT</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s">&#39;right wall&#39;</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backwall</span> <span class="o">=</span> <span class="n">Plane</span><span class="p">(</span><span class="n">Point</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">L</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="n">FRONT</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s">&#39;back wall&#39;</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frontwall</span> <span class="o">=</span> <span class="n">Plane</span><span class="p">(</span><span class="n">Point</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="n">L</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="n">BACK</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s">&#39;front wall&#39;</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">floor</span> <span class="o">=</span> <span class="n">Plane</span><span class="p">(</span><span class="n">Point</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="n">UP</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s">&#39;floor&#39;</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ceiling</span> <span class="o">=</span> <span class="n">Plane</span><span class="p">(</span><span class="n">UP</span> <span class="o">*</span> <span class="n">h</span><span class="p">,</span> <span class="n">DOWN</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s">&#39;ceiling&#39;</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="p">)</span>
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">RoomScene</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">leftwall</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">rightwall</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">backwall</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">frontwall</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">floor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ceiling</span><span class="p">],</span> <span class="n">stopcondition</span> <span class="o">=</span> <span class="n">stopcondition</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="nf">get_beam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">nrays</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">method</span> <span class="o">=</span> <span class="s">&#39;exact&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s">&#39;exact&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">FloatTriplet</span><span class="p">):</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">position</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s">&#39;random&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">RoomScene</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">get_beam</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">nrays</span> <span class="o">=</span> <span class="n">nrays</span><span class="p">)</span>
+
+        <span class="n">nreflections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nreflections</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">Beam</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsources</span><span class="p">):</span>
+            <span class="c"># total number of real+virtual sources</span>
+            <span class="c"># TODO:</span>
+            <span class="c"># find out the analytical value, see test_sum (in old spatializer files)</span>
+            <span class="k">def</span> <span class="nf">n2d</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+                <span class="k">return</span> <span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="o">*</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">def</span> <span class="nf">n3d</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+                <span class="n">sumvect</span> <span class="o">=</span> <span class="n">n2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">n2d</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sumvect</span><span class="p">)</span>
+            <span class="n">N</span> <span class="o">=</span> <span class="n">n3d</span><span class="p">(</span><span class="n">nreflections</span><span class="p">)</span>
+
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">Beam</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">target_source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sources</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+            
+            <span class="n">tmp</span><span class="o">.</span><span class="n">origins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">tmp</span><span class="o">.</span><span class="n">nrays</span><span class="p">))</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">nreflections</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tmp</span><span class="o">.</span><span class="n">nrays</span><span class="p">)</span>
+            
+            <span class="c"># room center</span>
+            <span class="n">Oroom</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="o">/</span><span class="mi">2</span> <span class="o">*</span> <span class="n">UP</span><span class="p">)</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="n">Xprime</span> <span class="o">=</span> <span class="p">(</span><span class="n">position</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">-</span> <span class="n">Oroom</span><span class="p">)</span> <span class="c"># microphone location in room</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sources</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">array</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">-</span> <span class="n">Oroom</span><span class="p">)</span> <span class="c"># talker location</span>
+            <span class="n">lLh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">])</span>
+
+            <span class="c"># signature function</span>
+            <span class="n">sigma</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="o">-</span><span class="mf">2.</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="o">-.</span><span class="mi">5</span><span class="p">)</span>
+
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">nreflections</span><span class="p">,</span> <span class="n">nreflections</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">nreflections</span><span class="p">,</span> <span class="n">nreflections</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">nreflections</span><span class="p">,</span> <span class="n">nreflections</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                        <span class="n">nrefs</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">nrefs</span> <span class="o">&lt;=</span> <span class="n">nreflections</span><span class="p">:</span>
+                            <span class="n">tmp</span><span class="o">.</span><span class="n">nreflections</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">nrefs</span>
+                            <span class="n">Rp</span> <span class="o">=</span> <span class="n">lLh</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                            <span class="n">Rp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="n">n</span>
+                            <span class="n">Rp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="n">m</span>
+                            <span class="n">Rp</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*=</span> <span class="n">p</span>
+                            <span class="n">Vsource</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">sigma</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">*</span><span class="n">X</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> 
+                                                <span class="n">sigma</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">*</span><span class="n">X</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                                <span class="n">sigma</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="o">*</span><span class="n">X</span><span class="p">[</span><span class="mi">2</span><span class="p">]])</span> <span class="o">+</span> <span class="n">Rp</span>
+
+                            <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">m</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">p</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="n">tmp</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="n">Xprime</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">tmp</span><span class="o">.</span><span class="n">directions</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">Vsource</span> <span class="o">-</span> <span class="n">Xprime</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                            <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">normalize</span><span class="p">()</span>
+        <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Casting </span><span class="si">%d</span><span class="s"> rays&#39;</span> <span class="o">%</span> <span class="n">res</span><span class="o">.</span><span class="n">nrays</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="c"># Geometrical Attributes</span>
+<div class="viewcode-block" id="RoomScene.volume"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.RoomScene.volume">[docs]</a>    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Here it is computed exactly.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span>
+    </div>
+<div class="viewcode-block" id="RoomScene.area"><a class="viewcode-back" href="../../../user/raytracer.html#pynaural.raytracer.scenes.RoomScene.area">[docs]</a>    <span class="k">def</span> <span class="nf">area</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Here it is computed exactly.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c"># surf order:</span>
+        <span class="c"># l r b f f c</span>
+        <span class="p">{</span>
+            <span class="s">&#39;left&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s">&#39;right&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s">&#39;back&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="s">&#39;front&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+            <span class="s">&#39;floor&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="s">&#39;ceiling&#39;</span><span class="p">:</span> <span class="mi">6</span>
+            <span class="p">}</span>
+        <span class="n">areas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">,</span> 
+                          <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">,</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">areas</span>
+
+<span class="c"># distance correction to avoid self-reflection</span></div></div>
+<span class="k">def</span> <span class="nf">correct_dists</span><span class="p">(</span><span class="n">dists</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">=</span> <span class="n">DEFAULT_PRECISION</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">epsilon</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">ncorr</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">dists</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">ncorr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">log_debug</span><span class="p">(</span><span class="s">&#39;Corrected &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span> <span class="n">ncorr</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">dists</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;</span><span class="si">% o</span><span class="s">f distances&#39;</span><span class="p">)</span>
+            <span class="n">dists</span><span class="p">[</span><span class="n">dists</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">return</span> <span class="n">dists</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">dists</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user/index.html">User Guide</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             >index</a>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer">
+        &copy; Copyright 2013, Victor Benichoux.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

@@ -1,0 +1,15 @@
+User Guide
+==========
+
+This manual is intended to explain how the spatializer module works.
+
+.. toctree::
+   :maxdepth: 2
+
+   raytracer
+   signal
+   binaural
+
+   geometry
+   receivers
+

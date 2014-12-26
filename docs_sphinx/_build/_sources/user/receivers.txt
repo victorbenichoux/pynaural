@@ -1,0 +1,12 @@
+Receivers
+=========
+
+This documentation deals with the basic acoustical objects in the spatializer.
+
+.. toctree::
+
+.. automodule:: pynaural.signal.receivers
+   :members:
+
+
+   

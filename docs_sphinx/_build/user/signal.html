@@ -1,0 +1,1548 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Signal processing &mdash; Pynaural 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pynaural 0.1 documentation" href="../index.html" />
+    <link rel="up" title="User Guide" href="index.html" />
+    <link rel="next" title="Raytracer" href="binaural.html" />
+    <link rel="prev" title="Raytracer" href="raytracer.html" /> 
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <div class="headertitle"><a
+          href="../index.html">Pynaural 0.1 documentation</a></div>
+        <div class="rel">
+          <a href="raytracer.html" title="Raytracer"
+             accesskey="P">previous</a> |
+          <a href="binaural.html" title="Raytracer"
+             accesskey="N">next</a> |
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="signal-processing">
+<h1>Signal processing<a class="headerlink" href="#signal-processing" title="Permalink to this headline">¶</a></h1>
+<p>This documentation deals with the basic geometrical objects in the spatializer</p>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<div class="section" id="module-pynaural.signal.sounds">
+<span id="sounds"></span><h2>Sounds<a class="headerlink" href="#module-pynaural.signal.sounds" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pynaural.signal.sounds.Sound">
+<em class="property">class </em><tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">Sound</tt><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for working with sounds, including loading/saving, manipulating and playing.</p>
+<p>For an overview, see <em class="xref std std-ref">sounds_overview</em>.</p>
+<p><strong>Initialisation</strong></p>
+<p>The following arguments are used to initialise a sound object</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">data</span></tt></dt>
+<dd>Can be a filename, an array, a function or a sequence (list or tuple).
+If its a filename, the sound file (WAV or AIFF) will be loaded. If its
+an array, it should have shape <tt class="docutils literal"><span class="pre">(nsamples,</span> <span class="pre">nchannels)</span></tt>. If its a
+function, it should be a function f(t). If its a sequence, the items
+in the sequence can be filenames, functions, arrays or Sound objects.
+The output will be a multi-channel sound with channels the corresponding
+sound for each element of the sequence.</dd>
+<dt><tt class="docutils literal"><span class="pre">samplerate=None</span></tt></dt>
+<dd>The samplerate, if necessary, will use the default (for an array or
+function) or the samplerate of the data (for a filename).</dd>
+<dt><tt class="docutils literal"><span class="pre">duration=None</span></tt></dt>
+<dd>The duration of the sound, if initialising with a function.</dd>
+</dl>
+<p><strong>Loading, saving and playing</strong></p>
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.load">
+<em class="property">static </em><tt class="descname">load</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the file given by filename and returns a Sound object.
+Sound file can be either a .wav or a .aif file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.save">
+<tt class="descname">save</tt><big>(</big><em>filename</em>, <em>normalise=False</em>, <em>samplewidth=2</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the sound as a WAV.</p>
+<p>If the normalise keyword is set to True, the amplitude of the sound will be
+normalised to 1. The samplewidth keyword can be 1 or 2 to save the data as
+8 or 16 bit samples.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.play">
+<tt class="descname">play</tt><big>(</big><em>sleep=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.play"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.play" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plays the sound (normalised to avoid clipping if required). If
+sleep=True then the function will wait until the sound has finished
+playing before returning.</p>
+</dd></dl>
+
+<p><strong>Properties</strong></p>
+<dl class="attribute">
+<dt id="pynaural.signal.sounds.Sound.duration">
+<tt class="descname">duration</tt><a class="headerlink" href="#pynaural.signal.sounds.Sound.duration" title="Permalink to this definition">¶</a></dt>
+<dd><p>The length of the sound in seconds.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pynaural.signal.sounds.Sound.nsamples">
+<tt class="descname">nsamples</tt><a class="headerlink" href="#pynaural.signal.sounds.Sound.nsamples" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of samples in the sound.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pynaural.signal.sounds.Sound.nchannels">
+<tt class="descname">nchannels</tt><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.nchannels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.nchannels" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of channels in the sound.
+:return:</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pynaural.signal.sounds.Sound.times">
+<tt class="descname">times</tt><a class="headerlink" href="#pynaural.signal.sounds.Sound.times" title="Permalink to this definition">¶</a></dt>
+<dd><p>An array of times (in seconds) corresponding to each sample.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pynaural.signal.sounds.Sound.left">
+<tt class="descname">left</tt><a class="headerlink" href="#pynaural.signal.sounds.Sound.left" title="Permalink to this definition">¶</a></dt>
+<dd><p>The left channel for a stereo sound.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pynaural.signal.sounds.Sound.right">
+<tt class="descname">right</tt><a class="headerlink" href="#pynaural.signal.sounds.Sound.right" title="Permalink to this definition">¶</a></dt>
+<dd><p>The right channel for a stereo sound.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.channel">
+<tt class="descname">channel</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.channel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.channel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the nth channel of the sound.</p>
+</dd></dl>
+
+<p><strong>Generating sounds</strong></p>
+<p>All sound generating methods can be used with durations arguments in samples (int) or units (e.g. 500*ms). One can also set the number of channels by setting the keyword argument nchannels to the desired value. Notice that for noise the channels will be generated independantly.</p>
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.tone">
+<em class="property">static </em><tt class="descname">tone</tt><big>(</big><em>frequency</em>, <em>duration</em>, <em>phase=0</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.tone"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.tone" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a pure tone at frequency for duration, using the default
+samplerate or the given one. The <tt class="docutils literal"><span class="pre">frequency</span></tt> and <tt class="docutils literal"><span class="pre">phase</span></tt> parameters
+can be single values, in which case multiple channels can be
+specified with the <tt class="docutils literal"><span class="pre">nchannels</span></tt> argument, or they can be sequences
+(lists/tuples/arrays) in which case there is one frequency or phase for
+each channel.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.whitenoise">
+<em class="property">static </em><tt class="descname">whitenoise</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.whitenoise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.whitenoise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a white noise. If the samplerate is not specified, the global
+default value will be used.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.powerlawnoise">
+<em class="property">static </em><tt class="descname">powerlawnoise</tt><big>(</big><em>duration</em>, <em>alpha</em>, <em>samplerate=None</em>, <em>nchannels=1</em>, <em>normalise=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.powerlawnoise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.powerlawnoise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a power-law noise for the given duration. Spectral density per unit of bandwidth scales as 1/(f**alpha).</p>
+<p>Sample usage:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">noise</span> <span class="o">=</span> <span class="n">powerlawnoise</span><span class="p">(</span><span class="mi">200</span><span class="o">*</span><span class="n">ms</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="mi">44100</span><span class="o">*</span><span class="n">Hz</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">duration</span></tt></dt>
+<dd>Duration of the desired output.</dd>
+<dt><tt class="docutils literal"><span class="pre">alpha</span></tt></dt>
+<dd>Power law exponent.</dd>
+<dt><tt class="docutils literal"><span class="pre">samplerate</span></tt></dt>
+<dd>Desired output samplerate</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.brownnoise">
+<em class="property">static </em><tt class="descname">brownnoise</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em>, <em>normalise=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.brownnoise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.brownnoise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns brown noise, i.e <a class="reference internal" href="#pynaural.signal.sounds.powerlawnoise" title="pynaural.signal.sounds.powerlawnoise"><tt class="xref py py-func docutils literal"><span class="pre">powerlawnoise()</span></tt></a> with alpha=2</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.pinknoise">
+<em class="property">static </em><tt class="descname">pinknoise</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em>, <em>normalise=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.pinknoise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.pinknoise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns pink noise, i.e <a class="reference internal" href="#pynaural.signal.sounds.powerlawnoise" title="pynaural.signal.sounds.powerlawnoise"><tt class="xref py py-func docutils literal"><span class="pre">powerlawnoise()</span></tt></a> with alpha=1</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.silence">
+<em class="property">static </em><tt class="descname">silence</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.silence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.silence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a silent, zero sound for the given duration. Set nchannels to set the number of channels.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.click">
+<em class="property">static </em><tt class="descname">click</tt><big>(</big><em>duration</em>, <em>peak=None</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.click"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.click" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a click of the given duration.</p>
+<p>If <tt class="docutils literal"><span class="pre">peak</span></tt> is not specified, the amplitude will be 1, otherwise
+<tt class="docutils literal"><span class="pre">peak</span></tt> refers to the peak dB SPL of the click, according to the
+formula <tt class="docutils literal"><span class="pre">28e-6*10**(peak/20.)</span></tt>.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.clicks">
+<em class="property">static </em><tt class="descname">clicks</tt><big>(</big><em>duration</em>, <em>n</em>, <em>interval</em>, <em>peak=None</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.clicks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.clicks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a series of n clicks (see <a class="reference internal" href="#pynaural.signal.sounds.click" title="pynaural.signal.sounds.click"><tt class="xref py py-func docutils literal"><span class="pre">click()</span></tt></a>) separated by interval.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.harmoniccomplex">
+<em class="property">static </em><tt class="descname">harmoniccomplex</tt><big>(</big><em>f0</em>, <em>duration</em>, <em>amplitude=1</em>, <em>phase=0</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.harmoniccomplex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.harmoniccomplex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a harmonic complex composed of pure tones at integer multiples
+of the fundamental frequency <tt class="docutils literal"><span class="pre">f0</span></tt>.
+The <tt class="docutils literal"><span class="pre">amplitude</span></tt> and
+<tt class="docutils literal"><span class="pre">phase</span></tt> keywords can be set to either a single value or an
+array of values. In the former case the value is set for all
+harmonics, and harmonics up to the sampling frequency are
+generated. In the latter each harmonic parameter is set
+separately, and the number of harmonics generated corresponds
+to the length of the array.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.vowel">
+<em class="property">static </em><tt class="descname">vowel</tt><big>(</big><em>vowel=None</em>, <em>formants=None</em>, <em>pitch=100</em>, <em>duration=1</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.vowel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.vowel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an artifically created spoken vowel sound (following the
+source-filter model of speech production) with a given <tt class="docutils literal"><span class="pre">pitch</span></tt>.</p>
+<p>The vowel can be specified by either providing <tt class="docutils literal"><span class="pre">vowel</span></tt> as a string
+(&#8216;a&#8217;, &#8216;i&#8217; or &#8216;u&#8217;) or by setting <tt class="docutils literal"><span class="pre">formants</span></tt> to a sequence of formant
+frequencies.</p>
+<p>The returned sound is normalized to a maximum amplitude of 1.</p>
+<p>The implementation is based on the MakeVowel function written by Richard
+O. Duda, part of the Auditory Toolbox for Matlab by Malcolm Slaney:
+<a class="reference external" href="http://cobweb.ecn.purdue.edu/~malcolm/interval/1998-010/">http://cobweb.ecn.purdue.edu/~malcolm/interval/1998-010/</a></p>
+</dd></dl>
+
+<p><strong>Timing and sequencing</strong></p>
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.sequence">
+<em class="property">static </em><tt class="descname">sequence</tt><big>(</big><em>*sounds</em>, <em>samplerate=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.sequence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.sequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the sequence of sounds in the list sounds joined together</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.repeat">
+<tt class="descname">repeat</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.repeat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.repeat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repeats the sound n times</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.extended">
+<tt class="descname">extended</tt><big>(</big><em>duration</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.extended"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.extended" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the Sound with length extended by the given duration, which
+can be the number of samples or a length of time in seconds.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.shifted">
+<tt class="descname">shifted</tt><big>(</big><em>duration</em>, <em>fractional=False</em>, <em>filter_length=2048</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.shifted"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.shifted" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the sound delayed by duration, which can be the number of
+samples or a length of time in seconds. Normally, only integer
+numbers of samples will be used, but if <tt class="docutils literal"><span class="pre">fractional=True</span></tt> then
+the filtering method from
+<a class="reference external" href="http://www.labbookpages.co.uk/audio/beamforming/fractionalDelay.html">http://www.labbookpages.co.uk/audio/beamforming/fractionalDelay.html</a>
+will be used (introducing some small numerical errors). With this
+method, you can specify the <tt class="docutils literal"><span class="pre">filter_length</span></tt>, larger values are
+slower but more accurate, especially at higher frequencies. The large
+default value of 2048 samples provides good accuracy for sounds with
+frequencies above 20 Hz, but not for lower frequency sounds. If you are
+restricted to high frequency sounds, a smaller value will be more
+efficient. Note that if <tt class="docutils literal"><span class="pre">fractional=True</span></tt> then
+<tt class="docutils literal"><span class="pre">duration</span></tt> is assumed to be a time not a number of samples.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.resized">
+<tt class="descname">resized</tt><big>(</big><em>L</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.resized"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.resized" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the Sound with length extended (or contracted) to have L samples.</p>
+</dd></dl>
+
+<p><strong>Slicing</strong></p>
+<p>One can slice sound objects in various ways, for example <tt class="docutils literal"><span class="pre">sound[100*ms:200*ms]</span></tt>
+returns the part of the sound between 100 ms and 200 ms (not including the
+right hand end point). If the sound is less than 200 ms long it will be
+zero padded. You can also set values using slicing, e.g.
+<tt class="docutils literal"><span class="pre">sound[:50*ms]</span> <span class="pre">=</span> <span class="pre">0</span></tt> will silence the first 50 ms of the sound. The syntax
+is the same as usual for Python slicing. In addition, you can select a
+subset of the channels by doing, for example, <tt class="docutils literal"><span class="pre">sound[:,</span> <span class="pre">-5:]</span></tt> would be
+the last 5 channels. For time indices, either times or samples can be given,
+e.g. <tt class="docutils literal"><span class="pre">sound[:100]</span></tt> gives the first 100 samples. In addition, steps can
+be used for example to reverse a sound as <tt class="docutils literal"><span class="pre">sound[::-1]</span></tt>.</p>
+<p><strong>Arithmetic operations</strong></p>
+<p>Standard arithemetical operations and numpy functions work as you would
+expect with sounds, e.g. <tt class="docutils literal"><span class="pre">sound1+sound2</span></tt>, <tt class="docutils literal"><span class="pre">3*sound</span></tt> or <tt class="docutils literal"><span class="pre">abs(sound)</span></tt>.</p>
+<p><strong>Level</strong></p>
+<dl class="attribute">
+<dt id="pynaural.signal.sounds.Sound.level">
+<tt class="descname">level</tt><a class="headerlink" href="#pynaural.signal.sounds.Sound.level" title="Permalink to this definition">¶</a></dt>
+<dd><p>Can be used to get or set the level of a sound, which should be in dB.
+For single channel sounds a value in dB is used, for multiple channel
+sounds a value in dB can be used for setting the level (all channels
+will be set to the same level), or a list/tuple/array of levels. It
+is assumed that the unit of the sound is Pascals.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.atlevel">
+<tt class="descname">atlevel</tt><big>(</big><em>level</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.atlevel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.atlevel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the sound at the given level in dB SPL (RMS) assuming array is
+in Pascals. <tt class="docutils literal"><span class="pre">level</span></tt> should be a value in dB, or a tuple of levels,
+one for each channel.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pynaural.signal.sounds.Sound.maxlevel">
+<tt class="descname">maxlevel</tt><a class="headerlink" href="#pynaural.signal.sounds.Sound.maxlevel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Can be used to set or get the maximum level of a sound. For mono
+sounds, this is the same as the level, but for multichannel sounds
+it is the maximum level across the channels. Relative level differences
+will be preserved. The specified level should be a value in dB, and it
+is assumed that the unit of the sound is Pascals.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.atmaxlevel">
+<tt class="descname">atmaxlevel</tt><big>(</big><em>level</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.atmaxlevel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.atmaxlevel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the sound with the maximum level across channels set to the
+given level. Relative level differences will be preserved. The specified
+level should be a value in dB and it is assumed that the unit of the
+sound is Pascals.</p>
+</dd></dl>
+
+<p><strong>Ramping</strong></p>
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.ramp">
+<tt class="descname">ramp</tt><big>(</big><em>when='onset'</em>, <em>duration=0.01</em>, <em>envelope=None</em>, <em>inplace=True</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.ramp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.ramp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a ramp on/off to the sound</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">when='onset'</span></tt></dt>
+<dd>Can take values &#8216;onset&#8217;, &#8216;offset&#8217; or &#8216;both&#8217;</dd>
+<dt><tt class="docutils literal"><span class="pre">duration=10*ms</span></tt></dt>
+<dd>The time over which the ramping happens</dd>
+<dt><tt class="docutils literal"><span class="pre">envelope</span></tt></dt>
+<dd>A ramping function, if not specified uses <tt class="docutils literal"><span class="pre">sin(pi*t/2)**2</span></tt>. The
+function should be a function of one variable <tt class="docutils literal"><span class="pre">t</span></tt> ranging from
+0 to 1, and should increase from <tt class="docutils literal"><span class="pre">f(0)=0</span></tt> to <tt class="docutils literal"><span class="pre">f(0)=1</span></tt>. The
+reverse is applied for the offset ramp.</dd>
+<dt><tt class="docutils literal"><span class="pre">inplace</span></tt></dt>
+<dd>Whether to apply ramping to current sound or return a new array.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.ramped">
+<tt class="descname">ramped</tt><big>(</big><em>when='onset'</em>, <em>duration=0.01</em>, <em>envelope=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.ramped"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.ramped" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a ramped version of the sound (see <a class="reference internal" href="#pynaural.signal.sounds.Sound.ramp" title="pynaural.signal.sounds.Sound.ramp"><tt class="xref py py-meth docutils literal"><span class="pre">Sound.ramp()</span></tt></a>).</p>
+</dd></dl>
+
+<p><strong>Plotting</strong></p>
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.spectrogram">
+<tt class="descname">spectrogram</tt><big>(</big><em>low=None</em>, <em>high=None</em>, <em>log_power=True</em>, <em>other=None</em>, <em>**kwds</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.spectrogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.spectrogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots a spectrogram of the sound</p>
+<p>Arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">low=None</span></tt>, <tt class="docutils literal"><span class="pre">high=None</span></tt></dt>
+<dd>If these are left unspecified, it shows the full spectrogram,
+otherwise it shows only between <tt class="docutils literal"><span class="pre">low</span></tt> and <tt class="docutils literal"><span class="pre">high</span></tt> in Hz.</dd>
+<dt><tt class="docutils literal"><span class="pre">log_power=True</span></tt></dt>
+<dd>If True the colour represents the log of the power.</dd>
+<dt><tt class="docutils literal"><span class="pre">**kwds</span></tt></dt>
+<dd>Are passed to Pylab&#8217;s <tt class="docutils literal"><span class="pre">specgram</span></tt> command.</dd>
+</dl>
+<p>Returns the values returned by pylab&#8217;s <tt class="docutils literal"><span class="pre">specgram</span></tt>, namely
+<tt class="docutils literal"><span class="pre">(pxx,</span> <span class="pre">freqs,</span> <span class="pre">bins,</span> <span class="pre">im)</span></tt> where <tt class="docutils literal"><span class="pre">pxx</span></tt> is a 2D array of powers,
+<tt class="docutils literal"><span class="pre">freqs</span></tt> is the corresponding frequencies, <tt class="docutils literal"><span class="pre">bins</span></tt> are the time bins,
+and <tt class="docutils literal"><span class="pre">im</span></tt> is the image axis.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.spectrum">
+<tt class="descname">spectrum</tt><big>(</big><em>low=None</em>, <em>high=None</em>, <em>log_power=True</em>, <em>display=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the spectrum of the sound and optionally plots it.</p>
+<p>Arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">low</span></tt>, <tt class="docutils literal"><span class="pre">high</span></tt></dt>
+<dd>If these are left unspecified, it shows the full spectrum,
+otherwise it shows only between <tt class="docutils literal"><span class="pre">low</span></tt> and <tt class="docutils literal"><span class="pre">high</span></tt> in Hz.</dd>
+<dt><tt class="docutils literal"><span class="pre">log_power=True</span></tt></dt>
+<dd>If True it returns the log of the power.</dd>
+<dt><tt class="docutils literal"><span class="pre">display=False</span></tt></dt>
+<dd>Whether to plot the output.</dd>
+</dl>
+<p>Returns <tt class="docutils literal"><span class="pre">(Z,</span> <span class="pre">freqs,</span> <span class="pre">phase)</span></tt>
+where <tt class="docutils literal"><span class="pre">Z</span></tt> is a 1D array of powers, <tt class="docutils literal"><span class="pre">freqs</span></tt> is the corresponding
+frequencies, <tt class="docutils literal"><span class="pre">phase</span></tt> is the unwrapped phase of spectrum.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">atlevel</tt><big>(</big><em>level</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.atlevel"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the sound at the given level in dB SPL (RMS) assuming array is
+in Pascals. <tt class="docutils literal"><span class="pre">level</span></tt> should be a value in dB, or a tuple of levels,
+one for each channel.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">atmaxlevel</tt><big>(</big><em>level</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.atmaxlevel"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the sound with the maximum level across channels set to the
+given level. Relative level differences will be preserved. The specified
+level should be a value in dB and it is assumed that the unit of the
+sound is Pascals.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">brownnoise</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em>, <em>normalise=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.brownnoise"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns brown noise, i.e <a class="reference internal" href="#pynaural.signal.sounds.powerlawnoise" title="pynaural.signal.sounds.powerlawnoise"><tt class="xref py py-func docutils literal"><span class="pre">powerlawnoise()</span></tt></a> with alpha=2</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">channel</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.channel"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the nth channel of the sound.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">click</tt><big>(</big><em>duration</em>, <em>peak=None</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.click"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a click of the given duration.</p>
+<p>If <tt class="docutils literal"><span class="pre">peak</span></tt> is not specified, the amplitude will be 1, otherwise
+<tt class="docutils literal"><span class="pre">peak</span></tt> refers to the peak dB SPL of the click, according to the
+formula <tt class="docutils literal"><span class="pre">28e-6*10**(peak/20.)</span></tt>.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">clicks</tt><big>(</big><em>duration</em>, <em>n</em>, <em>interval</em>, <em>peak=None</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.clicks"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a series of n clicks (see <a class="reference internal" href="#pynaural.signal.sounds.click" title="pynaural.signal.sounds.click"><tt class="xref py py-func docutils literal"><span class="pre">click()</span></tt></a>) separated by interval.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">duration</tt></dt>
+<dd><p>The length of the sound in seconds.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">extended</tt><big>(</big><em>duration</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.extended"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the Sound with length extended by the given duration, which
+can be the number of samples or a length of time in seconds.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.fft">
+<tt class="descname">fft</tt><big>(</big><em>n=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.fft"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.fft" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs an n-point FFT on the sound object, that is an array of the same size containing the DFT of each channel. n defaults to the number of samples of the sound, but can be changed manually setting the <tt class="docutils literal"><span class="pre">n</span></tt> keyword argument</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.get_level">
+<tt class="descname">get_level</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.get_level"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.get_level" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns level in dB SPL (RMS) assuming array is in Pascals.
+In the case of multi-channel sounds, returns an array of levels
+for each channel, otherwise returns a float.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">harmoniccomplex</tt><big>(</big><em>f0</em>, <em>duration</em>, <em>amplitude=1</em>, <em>phase=0</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.harmoniccomplex"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a harmonic complex composed of pure tones at integer multiples
+of the fundamental frequency <tt class="docutils literal"><span class="pre">f0</span></tt>.
+The <tt class="docutils literal"><span class="pre">amplitude</span></tt> and
+<tt class="docutils literal"><span class="pre">phase</span></tt> keywords can be set to either a single value or an
+array of values. In the former case the value is set for all
+harmonics, and harmonics up to the sampling frequency are
+generated. In the latter each harmonic parameter is set
+separately, and the number of harmonics generated corresponds
+to the length of the array.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.irno">
+<em class="property">static </em><tt class="descname">irno</tt><big>(</big><em>delay</em>, <em>gain</em>, <em>niter</em>, <em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.irno"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.irno" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an IRN_O noise. The iterated ripple noise is obtained many attenuated and
+delayed version of the original broadband noise.
+For more details: see Yost 1996 or chapter 15 in Hartman Sound Signal Sensation.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.sounds.Sound.irns">
+<em class="property">static </em><tt class="descname">irns</tt><big>(</big><em>delay</em>, <em>gain</em>, <em>niter</em>, <em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.irns"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.irns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an IRN_S noise. The iterated ripple noise is obtained trough
+a cascade of gain and delay filtering.
+For more details: see Yost 1996 or chapter 15 in Hartman Sound Signal Sensation.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">left</tt></dt>
+<dd><p>The left channel for a stereo sound.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">level</tt></dt>
+<dd><p>Can be used to get or set the level of a sound, which should be in dB.
+For single channel sounds a value in dB is used, for multiple channel
+sounds a value in dB can be used for setting the level (all channels
+will be set to the same level), or a list/tuple/array of levels. It
+is assumed that the unit of the sound is Pascals.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">load</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.load"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Load the file given by filename and returns a Sound object.
+Sound file can be either a .wav or a .aif file.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">maxlevel</tt></dt>
+<dd><p>Can be used to set or get the maximum level of a sound. For mono
+sounds, this is the same as the level, but for multichannel sounds
+it is the maximum level across the channels. Relative level differences
+will be preserved. The specified level should be a value in dB, and it
+is assumed that the unit of the sound is Pascals.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">nchannels</tt><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.nchannels"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>The number of channels in the sound.
+:return:</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">nsamples</tt></dt>
+<dd><p>The number of samples in the sound.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">pinknoise</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em>, <em>normalise=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.pinknoise"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns pink noise, i.e <a class="reference internal" href="#pynaural.signal.sounds.powerlawnoise" title="pynaural.signal.sounds.powerlawnoise"><tt class="xref py py-func docutils literal"><span class="pre">powerlawnoise()</span></tt></a> with alpha=1</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">play</tt><big>(</big><em>sleep=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.play"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plays the sound (normalised to avoid clipping if required). If
+sleep=True then the function will wait until the sound has finished
+playing before returning.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">powerlawnoise</tt><big>(</big><em>duration</em>, <em>alpha</em>, <em>samplerate=None</em>, <em>nchannels=1</em>, <em>normalise=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.powerlawnoise"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a power-law noise for the given duration. Spectral density per unit of bandwidth scales as 1/(f**alpha).</p>
+<p>Sample usage:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">noise</span> <span class="o">=</span> <span class="n">powerlawnoise</span><span class="p">(</span><span class="mi">200</span><span class="o">*</span><span class="n">ms</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="mi">44100</span><span class="o">*</span><span class="n">Hz</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">duration</span></tt></dt>
+<dd>Duration of the desired output.</dd>
+<dt><tt class="docutils literal"><span class="pre">alpha</span></tt></dt>
+<dd>Power law exponent.</dd>
+<dt><tt class="docutils literal"><span class="pre">samplerate</span></tt></dt>
+<dd>Desired output samplerate</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">ramp</tt><big>(</big><em>when='onset'</em>, <em>duration=0.01</em>, <em>envelope=None</em>, <em>inplace=True</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.ramp"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Adds a ramp on/off to the sound</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">when='onset'</span></tt></dt>
+<dd>Can take values &#8216;onset&#8217;, &#8216;offset&#8217; or &#8216;both&#8217;</dd>
+<dt><tt class="docutils literal"><span class="pre">duration=10*ms</span></tt></dt>
+<dd>The time over which the ramping happens</dd>
+<dt><tt class="docutils literal"><span class="pre">envelope</span></tt></dt>
+<dd>A ramping function, if not specified uses <tt class="docutils literal"><span class="pre">sin(pi*t/2)**2</span></tt>. The
+function should be a function of one variable <tt class="docutils literal"><span class="pre">t</span></tt> ranging from
+0 to 1, and should increase from <tt class="docutils literal"><span class="pre">f(0)=0</span></tt> to <tt class="docutils literal"><span class="pre">f(0)=1</span></tt>. The
+reverse is applied for the offset ramp.</dd>
+<dt><tt class="docutils literal"><span class="pre">inplace</span></tt></dt>
+<dd>Whether to apply ramping to current sound or return a new array.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">ramped</tt><big>(</big><em>when='onset'</em>, <em>duration=0.01</em>, <em>envelope=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.ramped"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a ramped version of the sound (see <a class="reference internal" href="#pynaural.signal.sounds.Sound.ramp" title="pynaural.signal.sounds.Sound.ramp"><tt class="xref py py-meth docutils literal"><span class="pre">Sound.ramp()</span></tt></a>).</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">repeat</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.repeat"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Repeats the sound n times</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.resample">
+<tt class="descname">resample</tt><big>(</big><em>samplerate</em>, <em>resample_type='sinc_best'</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.resample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.resample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a resampled version of the sound.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">resized</tt><big>(</big><em>L</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.resized"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the Sound with length extended (or contracted) to have L samples.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">right</tt></dt>
+<dd><p>The right channel for a stereo sound.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">save</tt><big>(</big><em>filename</em>, <em>normalise=False</em>, <em>samplewidth=2</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.save"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Save the sound as a WAV.</p>
+<p>If the normalise keyword is set to True, the amplitude of the sound will be
+normalised to 1. The samplewidth keyword can be 1 or 2 to save the data as
+8 or 16 bit samples.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">sequence</tt><big>(</big><em>*args</em>, <em>**kwds</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.sequence"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the sequence of sounds in the list sounds joined together</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.sounds.Sound.set_level">
+<tt class="descname">set_level</tt><big>(</big><em>level</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.set_level"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.Sound.set_level" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets level in dB SPL (RMS) assuming array is in Pascals. <tt class="docutils literal"><span class="pre">level</span></tt>
+should be a value in dB, or a tuple of levels, one for each channel.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">shifted</tt><big>(</big><em>duration</em>, <em>fractional=False</em>, <em>filter_length=2048</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.shifted"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the sound delayed by duration, which can be the number of
+samples or a length of time in seconds. Normally, only integer
+numbers of samples will be used, but if <tt class="docutils literal"><span class="pre">fractional=True</span></tt> then
+the filtering method from
+<a class="reference external" href="http://www.labbookpages.co.uk/audio/beamforming/fractionalDelay.html">http://www.labbookpages.co.uk/audio/beamforming/fractionalDelay.html</a>
+will be used (introducing some small numerical errors). With this
+method, you can specify the <tt class="docutils literal"><span class="pre">filter_length</span></tt>, larger values are
+slower but more accurate, especially at higher frequencies. The large
+default value of 2048 samples provides good accuracy for sounds with
+frequencies above 20 Hz, but not for lower frequency sounds. If you are
+restricted to high frequency sounds, a smaller value will be more
+efficient. Note that if <tt class="docutils literal"><span class="pre">fractional=True</span></tt> then
+<tt class="docutils literal"><span class="pre">duration</span></tt> is assumed to be a time not a number of samples.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">silence</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.silence"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a silent, zero sound for the given duration. Set nchannels to set the number of channels.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">spectrogram</tt><big>(</big><em>low=None</em>, <em>high=None</em>, <em>log_power=True</em>, <em>other=None</em>, <em>**kwds</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.spectrogram"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots a spectrogram of the sound</p>
+<p>Arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">low=None</span></tt>, <tt class="docutils literal"><span class="pre">high=None</span></tt></dt>
+<dd>If these are left unspecified, it shows the full spectrogram,
+otherwise it shows only between <tt class="docutils literal"><span class="pre">low</span></tt> and <tt class="docutils literal"><span class="pre">high</span></tt> in Hz.</dd>
+<dt><tt class="docutils literal"><span class="pre">log_power=True</span></tt></dt>
+<dd>If True the colour represents the log of the power.</dd>
+<dt><tt class="docutils literal"><span class="pre">**kwds</span></tt></dt>
+<dd>Are passed to Pylab&#8217;s <tt class="docutils literal"><span class="pre">specgram</span></tt> command.</dd>
+</dl>
+<p>Returns the values returned by pylab&#8217;s <tt class="docutils literal"><span class="pre">specgram</span></tt>, namely
+<tt class="docutils literal"><span class="pre">(pxx,</span> <span class="pre">freqs,</span> <span class="pre">bins,</span> <span class="pre">im)</span></tt> where <tt class="docutils literal"><span class="pre">pxx</span></tt> is a 2D array of powers,
+<tt class="docutils literal"><span class="pre">freqs</span></tt> is the corresponding frequencies, <tt class="docutils literal"><span class="pre">bins</span></tt> are the time bins,
+and <tt class="docutils literal"><span class="pre">im</span></tt> is the image axis.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">spectrum</tt><big>(</big><em>low=None</em>, <em>high=None</em>, <em>log_power=True</em>, <em>display=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.spectrum"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the spectrum of the sound and optionally plots it.</p>
+<p>Arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">low</span></tt>, <tt class="docutils literal"><span class="pre">high</span></tt></dt>
+<dd>If these are left unspecified, it shows the full spectrum,
+otherwise it shows only between <tt class="docutils literal"><span class="pre">low</span></tt> and <tt class="docutils literal"><span class="pre">high</span></tt> in Hz.</dd>
+<dt><tt class="docutils literal"><span class="pre">log_power=True</span></tt></dt>
+<dd>If True it returns the log of the power.</dd>
+<dt><tt class="docutils literal"><span class="pre">display=False</span></tt></dt>
+<dd>Whether to plot the output.</dd>
+</dl>
+<p>Returns <tt class="docutils literal"><span class="pre">(Z,</span> <span class="pre">freqs,</span> <span class="pre">phase)</span></tt>
+where <tt class="docutils literal"><span class="pre">Z</span></tt> is a 1D array of powers, <tt class="docutils literal"><span class="pre">freqs</span></tt> is the corresponding
+frequencies, <tt class="docutils literal"><span class="pre">phase</span></tt> is the unwrapped phase of spectrum.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">times</tt></dt>
+<dd><p>An array of times (in seconds) corresponding to each sample.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">tone</tt><big>(</big><em>frequency</em>, <em>duration</em>, <em>phase=0</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.tone"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a pure tone at frequency for duration, using the default
+samplerate or the given one. The <tt class="docutils literal"><span class="pre">frequency</span></tt> and <tt class="docutils literal"><span class="pre">phase</span></tt> parameters
+can be single values, in which case multiple channels can be
+specified with the <tt class="docutils literal"><span class="pre">nchannels</span></tt> argument, or they can be sequences
+(lists/tuples/arrays) in which case there is one frequency or phase for
+each channel.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">vowel</tt><big>(</big><em>vowel=None</em>, <em>formants=None</em>, <em>pitch=100</em>, <em>duration=1</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.vowel"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns an artifically created spoken vowel sound (following the
+source-filter model of speech production) with a given <tt class="docutils literal"><span class="pre">pitch</span></tt>.</p>
+<p>The vowel can be specified by either providing <tt class="docutils literal"><span class="pre">vowel</span></tt> as a string
+(&#8216;a&#8217;, &#8216;i&#8217; or &#8216;u&#8217;) or by setting <tt class="docutils literal"><span class="pre">formants</span></tt> to a sequence of formant
+frequencies.</p>
+<p>The returned sound is normalized to a maximum amplitude of 1.</p>
+<p>The implementation is based on the MakeVowel function written by Richard
+O. Duda, part of the Auditory Toolbox for Matlab by Malcolm Slaney:
+<a class="reference external" href="http://cobweb.ecn.purdue.edu/~malcolm/interval/1998-010/">http://cobweb.ecn.purdue.edu/~malcolm/interval/1998-010/</a></p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">whitenoise</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#Sound.whitenoise"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a white noise. If the samplerate is not specified, the global
+default value will be used.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.pinknoise">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">pinknoise</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em>, <em>normalise=False</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.pinknoise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns pink noise, i.e <a class="reference internal" href="#pynaural.signal.sounds.powerlawnoise" title="pynaural.signal.sounds.powerlawnoise"><tt class="xref py py-func docutils literal"><span class="pre">powerlawnoise()</span></tt></a> with alpha=1</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.brownnoise">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">brownnoise</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em>, <em>normalise=False</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.brownnoise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns brown noise, i.e <a class="reference internal" href="#pynaural.signal.sounds.powerlawnoise" title="pynaural.signal.sounds.powerlawnoise"><tt class="xref py py-func docutils literal"><span class="pre">powerlawnoise()</span></tt></a> with alpha=2</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.powerlawnoise">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">powerlawnoise</tt><big>(</big><em>duration</em>, <em>alpha</em>, <em>samplerate=None</em>, <em>nchannels=1</em>, <em>normalise=False</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.powerlawnoise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a power-law noise for the given duration. Spectral density per unit of bandwidth scales as 1/(f**alpha).</p>
+<p>Sample usage:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">noise</span> <span class="o">=</span> <span class="n">powerlawnoise</span><span class="p">(</span><span class="mi">200</span><span class="o">*</span><span class="n">ms</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="mi">44100</span><span class="o">*</span><span class="n">Hz</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">duration</span></tt></dt>
+<dd>Duration of the desired output.</dd>
+<dt><tt class="docutils literal"><span class="pre">alpha</span></tt></dt>
+<dd>Power law exponent.</dd>
+<dt><tt class="docutils literal"><span class="pre">samplerate</span></tt></dt>
+<dd>Desired output samplerate</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.whitenoise">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">whitenoise</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.whitenoise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a white noise. If the samplerate is not specified, the global
+default value will be used.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.irns">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">irns</tt><big>(</big><em>delay</em>, <em>gain</em>, <em>niter</em>, <em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.irns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an IRN_S noise. The iterated ripple noise is obtained trough
+a cascade of gain and delay filtering.
+For more details: see Yost 1996 or chapter 15 in Hartman Sound Signal Sensation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.irno">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">irno</tt><big>(</big><em>delay</em>, <em>gain</em>, <em>niter</em>, <em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.irno" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an IRN_O noise. The iterated ripple noise is obtained many attenuated and
+delayed version of the original broadband noise.
+For more details: see Yost 1996 or chapter 15 in Hartman Sound Signal Sensation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.tone">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">tone</tt><big>(</big><em>frequency</em>, <em>duration</em>, <em>phase=0</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.tone" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a pure tone at frequency for duration, using the default
+samplerate or the given one. The <tt class="docutils literal"><span class="pre">frequency</span></tt> and <tt class="docutils literal"><span class="pre">phase</span></tt> parameters
+can be single values, in which case multiple channels can be
+specified with the <tt class="docutils literal"><span class="pre">nchannels</span></tt> argument, or they can be sequences
+(lists/tuples/arrays) in which case there is one frequency or phase for
+each channel.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.click">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">click</tt><big>(</big><em>duration</em>, <em>peak=None</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.click" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a click of the given duration.</p>
+<p>If <tt class="docutils literal"><span class="pre">peak</span></tt> is not specified, the amplitude will be 1, otherwise
+<tt class="docutils literal"><span class="pre">peak</span></tt> refers to the peak dB SPL of the click, according to the
+formula <tt class="docutils literal"><span class="pre">28e-6*10**(peak/20.)</span></tt>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.clicks">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">clicks</tt><big>(</big><em>duration</em>, <em>n</em>, <em>interval</em>, <em>peak=None</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.clicks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a series of n clicks (see <a class="reference internal" href="#pynaural.signal.sounds.click" title="pynaural.signal.sounds.click"><tt class="xref py py-func docutils literal"><span class="pre">click()</span></tt></a>) separated by interval.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.silence">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">silence</tt><big>(</big><em>duration</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.silence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a silent, zero sound for the given duration. Set nchannels to set the number of channels.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.sequence">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">sequence</tt><big>(</big><em>*args</em>, <em>**kwds</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.sequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the sequence of sounds in the list sounds joined together</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.harmoniccomplex">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">harmoniccomplex</tt><big>(</big><em>f0</em>, <em>duration</em>, <em>amplitude=1</em>, <em>phase=0</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.harmoniccomplex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a harmonic complex composed of pure tones at integer multiples
+of the fundamental frequency <tt class="docutils literal"><span class="pre">f0</span></tt>.
+The <tt class="docutils literal"><span class="pre">amplitude</span></tt> and
+<tt class="docutils literal"><span class="pre">phase</span></tt> keywords can be set to either a single value or an
+array of values. In the former case the value is set for all
+harmonics, and harmonics up to the sampling frequency are
+generated. In the latter each harmonic parameter is set
+separately, and the number of harmonics generated corresponds
+to the length of the array.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.loadsound">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">loadsound</tt><big>(</big><em>filename</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.loadsound" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the file given by filename and returns a Sound object.
+Sound file can be either a .wav or a .aif file.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.savesound">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">savesound</tt><big>(</big><em>sound</em>, <em>filename</em>, <em>normalise=False</em>, <em>samplewidth=2</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#savesound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.savesound" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the sound as a WAV.</p>
+<p>If the normalise keyword is set to True, the amplitude of the sound will be
+normalised to 1. The samplewidth keyword can be 1 or 2 to save the data as
+8 or 16 bit samples.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.play">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">play</tt><big>(</big><em>*sounds</em>, <em>**kwds</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/sounds.html#play"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.sounds.play" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plays the sound (normalised to avoid clipping if required). If
+sleep=True then the function will wait until the sound has finished
+playing before returning.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.sounds.vowel">
+<tt class="descclassname">pynaural.signal.sounds.</tt><tt class="descname">vowel</tt><big>(</big><em>vowel=None</em>, <em>formants=None</em>, <em>pitch=100</em>, <em>duration=1</em>, <em>samplerate=None</em>, <em>nchannels=1</em><big>)</big><a class="headerlink" href="#pynaural.signal.sounds.vowel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an artifically created spoken vowel sound (following the
+source-filter model of speech production) with a given <tt class="docutils literal"><span class="pre">pitch</span></tt>.</p>
+<p>The vowel can be specified by either providing <tt class="docutils literal"><span class="pre">vowel</span></tt> as a string
+(&#8216;a&#8217;, &#8216;i&#8217; or &#8216;u&#8217;) or by setting <tt class="docutils literal"><span class="pre">formants</span></tt> to a sequence of formant
+frequencies.</p>
+<p>The returned sound is normalized to a maximum amplitude of 1.</p>
+<p>The implementation is based on the MakeVowel function written by Richard
+O. Duda, part of the Auditory Toolbox for Matlab by Malcolm Slaney:
+<a class="reference external" href="http://cobweb.ecn.purdue.edu/~malcolm/interval/1998-010/">http://cobweb.ecn.purdue.edu/~malcolm/interval/1998-010/</a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pynaural.signal.impulseresponse">
+<span id="impulse-responses-and-transfer-functions"></span><h2>Impulse Responses and Transfer Functions<a class="headerlink" href="#module-pynaural.signal.impulseresponse" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse">
+<em class="property">class </em><tt class="descclassname">pynaural.signal.impulseresponse.</tt><tt class="descname">ImpulseResponse</tt><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p><a class="reference internal" href="#pynaural.signal.impulseresponse.ImpulseResponse" title="pynaural.signal.impulseresponse.ImpulseResponse"><tt class="xref py py-class docutils literal"><span class="pre">ImpulseResponse</span></tt></a> for working with impulses responses. 
+This class basically behaves like an numpy.ndarray with each channel arranged as a column.</p>
+<p>Useful features:</p>
+<p>... listening
+ir.listen()
+... Spat related stuff
+ir.forsource(i)
+ir.nsources
+...coordinates related stuff
+ir.forcoordinate
+ir.ncoordinates
+ir.coordinates
+.... dsp stuff
+ir.apply
+... plotting
+ir.plot</p>
+<p>ir.reorder_coordinates</p>
+<p>Is used in the binaural cues module to compute itds/ilds</p>
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.apply">
+<tt class="descname">apply</tt><big>(</big><em>other</em>, <em>outlevel=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies the current Impulse responses to a sound.
+Either yields a single sound in the case where the Impulse response is only relative to a single source. Otherwise outputs a list of sounds for each source.</p>
+<p>Gain normalisation (outlevel kwdarg): 
+By default no gain, otherwise the gain is adjusted to that the loudest channel is at the level specified by outlevel. Hence the difference in level between the two channels is preserved. This is a different behavior from the one in brian.hears.sounds</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.atlevel">
+<tt class="descname">atlevel</tt><big>(</big><em>level</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.atlevel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.atlevel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalizes the IR relative to its most intensive source (in terms of max)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.convolve">
+<tt class="descname">convolve</tt><big>(</big><em>other</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.convolve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.convolve" title="Permalink to this definition">¶</a></dt>
+<dd><p>convolving two IRs should take them to the Frequency domain, linear convolve them</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.downsample">
+<tt class="descname">downsample</tt><big>(</big><em>q</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.downsample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.downsample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Downsamples the ImpulseResponse by a factor q (integer). Makes use of scipy.signal.decimate.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.forcoordinates">
+<tt class="descname">forcoordinates</tt><big>(</big><em>*args</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.forcoordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.forcoordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Should return an impulseResponse containing all the rays headed towards source args</p>
+<p>Usage:
+hrir.forcoordinates(20, 0) # returns az = 20 and elev =0
+hrir.forcoordinates([20, 0], [0, 5]) interpreted as az in [20,0] and elev in [0,5] so 4 pairs
+hrir.forcoordinates(lambda azim,elev: azim == 0 and elev in [0,7.5]</p>
+<p>hrir.forcoordinates(i) to iterate over positions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.forsource">
+<tt class="descname">forsource</tt><big>(</big><em>k</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.forsource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.forsource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the part of the impulse response that is related to source k (as precised in the target_source attribute)
+Only implemented for impulse response that are the result of computations in the spatializer</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.listen">
+<tt class="descname">listen</tt><big>(</big><em>sound=None</em>, <em>sleep=True</em>, <em>reference=True</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.listen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.listen" title="Permalink to this definition">¶</a></dt>
+<dd><p>If impulse response is more than one binaural or monaural,
+then all the sounds are played in a sequence</p>
+<p>TDO: WRITE DOC</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.load">
+<em class="property">static </em><tt class="descname">load</tt><big>(</big><em>fileobj</em>, <em>coordsfilter=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads an impulse response as saved using the .save method.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.onset_time">
+<tt class="descname">onset_time</tt><big>(</big><em>threshold=0.15</em>, <em>unit='time'</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.onset_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.onset_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the time it takes for the IR to reach threshold of its max value
+`` unit&#8217;&#8217; if &#8216;samples&#8217;, then in samples, if &#8216;time&#8217; (default) then is second.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.plot">
+<tt class="descname">plot</tt><big>(</big><em>cutIR=None</em>, <em>display=False</em>, <em>dB=False</em>, <em>label=''</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>easy plotting of IRs</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.plot_spectrum">
+<tt class="descname">plot_spectrum</tt><big>(</big><em>*args</em>, <em>**kwdargs</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.plot_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.plot_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calls plot on the transfer function from this ir</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.ramp">
+<tt class="descname">ramp</tt><big>(</big><em>nsamples</em>, <em>where='both'</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.ramp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.ramp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds the specified number of zeros at the end of the IR</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.reorder_coordinates">
+<tt class="descname">reorder_coordinates</tt><big>(</big><em>order</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.reorder_coordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.reorder_coordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a version of the ImpulseResponse with coordinates reordered according to the (ncoordinates,) integer permuation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.responsetime">
+<tt class="descname">responsetime</tt><big>(</big><em>criterion=60</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.responsetime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.responsetime" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the response time, that is the time when the initial signal loses 60 dB.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.save">
+<tt class="descname">save</tt><big>(</big><em>fileobj</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the impulse response as a npz file on the file specified by fileobj.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.trim">
+<tt class="descname">trim</tt><big>(</big><em>*args</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.trim"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.trim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the same HRIR but trimmed between start and stop. If start or stop are floats, they are interpreted as times.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.window">
+<tt class="descname">window</tt><big>(</big><em>t=None</em>, <em>bandwidth=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.window"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.window" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses smoothing.apply_windowing to window the impulseresponse</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.ImpulseResponse.zeropad">
+<tt class="descname">zeropad</tt><big>(</big><em>nzeros</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#ImpulseResponse.zeropad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.ImpulseResponse.zeropad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds the specified number of zeros at the end of the IR</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pynaural.signal.impulseresponse.TransferFunction">
+<em class="property">class </em><tt class="descclassname">pynaural.signal.impulseresponse.</tt><tt class="descname">TransferFunction</tt><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p><a class="reference internal" href="#pynaural.signal.impulseresponse.TransferFunction" title="pynaural.signal.impulseresponse.TransferFunction"><tt class="xref py py-class docutils literal"><span class="pre">TransferFunction</span></tt></a> for working with Transfer Function. It is the companion class of <a class="reference internal" href="#pynaural.signal.impulseresponse.ImpulseResponse" title="pynaural.signal.impulseresponse.ImpulseResponse"><tt class="xref py py-class docutils literal"><span class="pre">ImpulseResponse</span></tt></a> in the frequency domain.</p>
+<p>Useful features:</p>
+<p>... listening
+tf.listen()
+... Spat related stuff
+tf.forsource(i)
+tf.nsources
+...coordinates related stuff
+tf.forcoordinate
+tf.ncoordinates
+.... dsp stuff
+tf.apply
+... plotting
+tf.plot_spectrum
+tf.plot</p>
+<p>Is used in the binaural cues module to compute itds/ilds</p>
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.apply">
+<tt class="descname">apply</tt><big>(</big><em>other</em>, <em>outlevel=60</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies the current Impulse responses to a sound.
+Either yields a single sound in the case where the Impulse response is only relative to a single source. Otherwise outputs a list of sounds for each source.</p>
+<p>Gain normalisation (outlevel kwdarg): by default the gain is adjusted to that the loudest channel is at the level specified by outlevel. Hence the difference in level between the two channels is preserved. This is a different behavior from the one in brian.hears.sounds</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.collapse">
+<tt class="descname">collapse</tt><big>(</big><em>other=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.collapse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.collapse" title="Permalink to this definition">¶</a></dt>
+<dd><p>An TransferFunction that is the result from Spatializer computations has sources attached to it and possibly multiple rays per source.
+Using collapse on it yields a new TransferFunction with only one TransferFunction per source.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.forcoordinates">
+<tt class="descname">forcoordinates</tt><big>(</big><em>*args</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.forcoordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.forcoordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Should return an impulseResponse containing all the rays headed towards source args
+SPEC:
+value peut etre un int -&gt; indexation
+value peut etre une rotation?
+value peut etre un tuple (len=2) az, el
+value peut etre une condition: mieux!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.forsource">
+<tt class="descname">forsource</tt><big>(</big><em>k</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.forsource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.forsource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the part of the impulse response that is related to source k
+Only implemented for impulse response that are the result of computations in the spatializer</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.idi">
+<tt class="descname">idi</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.idi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.idi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the interaural diffraction index in radians</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.igd">
+<tt class="descname">igd</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.igd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.igd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the interaural group delay in ms,
+only for positive frequencies by default (because of the diff)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.ild">
+<tt class="descname">ild</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.ild"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.ild" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the interaural level difference in dB</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.ipd">
+<tt class="descname">ipd</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.ipd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.ipd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the interaural phase difference in radians</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.itd">
+<tt class="descname">itd</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.itd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.itd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the interaural phase delay in ms</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.listen">
+<tt class="descname">listen</tt><big>(</big><em>sound=None</em>, <em>sleep=True</em>, <em>reference=True</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.listen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.listen" title="Permalink to this definition">¶</a></dt>
+<dd><p>If impulse response is more than one binaural or monaural,
+then all the sounds are played in a sequence</p>
+<p>TDO: WRITE DOC</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.load">
+<em class="property">static </em><tt class="descname">load</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses pickle.load on <tt class="docutils literal"><span class="pre">filename</span></tt> to load a pickled ir.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.plot">
+<tt class="descname">plot</tt><big>(</big><em>dB=True</em>, <em>display=False</em>, <em>label=''</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the spectrum of the TF
+TODO: whould simply call TF().plot()</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.plot_binaural_cues">
+<tt class="descname">plot_binaural_cues</tt><big>(</big><em>frange=(500</em>, <em>20000)</em>, <em>display=False</em>, <em>smoothing=0.0</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.plot_binaural_cues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.plot_binaural_cues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the binaural cues</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pynaural.signal.impulseresponse.TransferFunction.save">
+<tt class="descname">save</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.impulseresponse.TransferFunction.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses pickle.dump on <tt class="docutils literal"><span class="pre">filename</span></tt> to dump the current ir.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><tt class="descclassname">pynaural.signal.impulseresponse.</tt><tt class="descname">TransferFunction</tt><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p><a class="reference internal" href="#pynaural.signal.impulseresponse.TransferFunction" title="pynaural.signal.impulseresponse.TransferFunction"><tt class="xref py py-class docutils literal"><span class="pre">TransferFunction</span></tt></a> for working with Transfer Function. It is the companion class of <a class="reference internal" href="#pynaural.signal.impulseresponse.ImpulseResponse" title="pynaural.signal.impulseresponse.ImpulseResponse"><tt class="xref py py-class docutils literal"><span class="pre">ImpulseResponse</span></tt></a> in the frequency domain.</p>
+<p>Useful features:</p>
+<p>... listening
+tf.listen()
+... Spat related stuff
+tf.forsource(i)
+tf.nsources
+...coordinates related stuff
+tf.forcoordinate
+tf.ncoordinates
+.... dsp stuff
+tf.apply
+... plotting
+tf.plot_spectrum
+tf.plot</p>
+<p>Is used in the binaural cues module to compute itds/ilds</p>
+<dl class="method">
+<dt>
+<tt class="descname">apply</tt><big>(</big><em>other</em>, <em>outlevel=60</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.apply"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Applies the current Impulse responses to a sound.
+Either yields a single sound in the case where the Impulse response is only relative to a single source. Otherwise outputs a list of sounds for each source.</p>
+<p>Gain normalisation (outlevel kwdarg): by default the gain is adjusted to that the loudest channel is at the level specified by outlevel. Hence the difference in level between the two channels is preserved. This is a different behavior from the one in brian.hears.sounds</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">collapse</tt><big>(</big><em>other=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.collapse"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>An TransferFunction that is the result from Spatializer computations has sources attached to it and possibly multiple rays per source.
+Using collapse on it yields a new TransferFunction with only one TransferFunction per source.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">forcoordinates</tt><big>(</big><em>*args</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.forcoordinates"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Should return an impulseResponse containing all the rays headed towards source args
+SPEC:
+value peut etre un int -&gt; indexation
+value peut etre une rotation?
+value peut etre un tuple (len=2) az, el
+value peut etre une condition: mieux!</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">forsource</tt><big>(</big><em>k</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.forsource"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the part of the impulse response that is related to source k
+Only implemented for impulse response that are the result of computations in the spatializer</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">idi</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.idi"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the interaural diffraction index in radians</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">igd</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.igd"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the interaural group delay in ms,
+only for positive frequencies by default (because of the diff)</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">ild</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.ild"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the interaural level difference in dB</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">ipd</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.ipd"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the interaural phase difference in radians</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">itd</tt><big>(</big><em>indices=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.itd"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the interaural phase delay in ms</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">listen</tt><big>(</big><em>sound=None</em>, <em>sleep=True</em>, <em>reference=True</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.listen"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>If impulse response is more than one binaural or monaural,
+then all the sounds are played in a sequence</p>
+<p>TDO: WRITE DOC</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt>
+<em class="property">static </em><tt class="descname">load</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.load"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Uses pickle.load on <tt class="docutils literal"><span class="pre">filename</span></tt> to load a pickled ir.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">plot</tt><big>(</big><em>dB=True</em>, <em>display=False</em>, <em>label=''</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.plot"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the spectrum of the TF
+TODO: whould simply call TF().plot()</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">plot_binaural_cues</tt><big>(</big><em>frange=(500</em>, <em>20000)</em>, <em>display=False</em>, <em>smoothing=0.0</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.plot_binaural_cues"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the binaural cues</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descname">save</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/impulseresponse.html#TransferFunction.save"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Uses pickle.dump on <tt class="docutils literal"><span class="pre">filename</span></tt> to dump the current ir.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pynaural.signal.filterbanks">
+<span id="filterbanks"></span><h2>Filterbanks<a class="headerlink" href="#module-pynaural.signal.filterbanks" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pynaural.signal.filterbanks.octaveband_filterbank">
+<tt class="descclassname">pynaural.signal.filterbanks.</tt><tt class="descname">octaveband_filterbank</tt><big>(</big><em>sound</em>, <em>cfs</em>, <em>samplerate</em>, <em>fraction=0.3333333333333333</em>, <em>butter_order=3</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/filterbanks.html#octaveband_filterbank"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.filterbanks.octaveband_filterbank" title="Permalink to this definition">¶</a></dt>
+<dd><p>passes the input sound through a bank of butterworth filters with fractional octave bandwidths
+:param sound:
+:param cfs:
+:param samplerate:
+:param fraction:
+:param butter_order:
+:return:</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.filterbanks.gammatone_filterbank">
+<tt class="descclassname">pynaural.signal.filterbanks.</tt><tt class="descname">gammatone_filterbank</tt><big>(</big><em>hrir</em>, <em>samplerate</em>, <em>cf</em>, <em>return_times=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/filterbanks.html#gammatone_filterbank"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.filterbanks.gammatone_filterbank" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the correlograms of hrir per band</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.filterbanks.gammatone_correlate">
+<tt class="descclassname">pynaural.signal.filterbanks.</tt><tt class="descname">gammatone_correlate</tt><big>(</big><em>hrir</em>, <em>samplerate</em>, <em>cf</em>, <em>return_times=False</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/filterbanks.html#gammatone_correlate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.filterbanks.gammatone_correlate" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the correlograms of hrir per band</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pynaural.signal.misc">
+<span id="filtering-etc"></span><h2>Filtering, etc.<a class="headerlink" href="#module-pynaural.signal.misc" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pynaural.signal.misc.my_logspace">
+<tt class="descclassname">pynaural.signal.misc.</tt><tt class="descname">my_logspace</tt><big>(</big><em>fdown</em>, <em>fup</em>, <em>nfreqs</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/misc.html#my_logspace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.misc.my_logspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns nfreqs logarithmically distributed frequencies between fdown and fup</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.misc.rms">
+<tt class="descclassname">pynaural.signal.misc.</tt><tt class="descname">rms</tt><big>(</big><em>x</em>, <em>axis=0</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/misc.html#rms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.misc.rms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the RMS value of the array given as argument</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.misc.fftconvolve">
+<tt class="descclassname">pynaural.signal.misc.</tt><tt class="descname">fftconvolve</tt><big>(</big><em>x</em>, <em>h</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/misc.html#fftconvolve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.misc.fftconvolve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses FFT to convolve two 1D signals together</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.misc.fftxcorr">
+<tt class="descclassname">pynaural.signal.misc.</tt><tt class="descname">fftxcorr</tt><big>(</big><em>x</em>, <em>h</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/misc.html#fftxcorr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.misc.fftxcorr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses FFT to do a cross correlation.
+It is equivalent to the function correlate from sp except it uses FFTs (so it&#8217;s faster).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.misc.ola_filter">
+<tt class="descclassname">pynaural.signal.misc.</tt><tt class="descname">ola_filter</tt><big>(</big><em>x</em>, <em>h</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/misc.html#ola_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.misc.ola_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overlap add method for linear convolution.
+Usually x must be longer than h (or the same length).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.misc.zeropad">
+<tt class="descclassname">pynaural.signal.misc.</tt><tt class="descname">zeropad</tt><big>(</big><em>x</em>, <em>n</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/misc.html#zeropad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.misc.zeropad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero pads the given array so that it ends up with the given length</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.misc.nextpow2">
+<tt class="descclassname">pynaural.signal.misc.</tt><tt class="descname">nextpow2</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/misc.html#nextpow2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.misc.nextpow2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the next pwer of 2 after n</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pynaural.signal.fitting">
+<span id="fitting"></span><h2>Fitting<a class="headerlink" href="#module-pynaural.signal.fitting" title="Permalink to this headline">¶</a></h2>
+<p>Some fitting routines that can be useful</p>
+<dl class="function">
+<dt id="pynaural.signal.fitting.unwrap_and_fit">
+<tt class="descclassname">pynaural.signal.fitting.</tt><tt class="descname">unwrap_and_fit</tt><big>(</big><em>frequencies</em>, <em>phases</em>, <em>plow=-3.141592653589793</em>, <em>phigh=3.141592653589793</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/fitting.html#unwrap_and_fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.fitting.unwrap_and_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unwraps a phase value (in radians, between -pi and pi) and perform a linear regression</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.fitting.circular_linear_regression">
+<tt class="descclassname">pynaural.signal.fitting.</tt><tt class="descname">circular_linear_regression</tt><big>(</big><em>frequencies</em>, <em>phases</em>, <em>slope_extent=None</em>, <em>Npoints_guess=100</em>, <em>slopeguess=None</em>, <em>verbose=False</em>, <em>weights=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/fitting.html#circular_linear_regression"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.fitting.circular_linear_regression" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses the method described in the paper Frequency invariant repr of ITDs (plos comp)</p>
+<p>first finds the slope and then the intercept</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.fitting.guess_init">
+<tt class="descclassname">pynaural.signal.fitting.</tt><tt class="descname">guess_init</tt><big>(</big><em>freqs</em>, <em>x</em>, <em>method='simple'</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/fitting.html#guess_init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.fitting.guess_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>provides a reasonable guess of the slope I think</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.fitting.intercept_maximization">
+<tt class="descclassname">pynaural.signal.fitting.</tt><tt class="descname">intercept_maximization</tt><big>(</big><em>frequencies</em>, <em>phases</em>, <em>slope</em>, <em>init=0.0</em>, <em>weights=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/fitting.html#intercept_maximization"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.fitting.intercept_maximization" title="Permalink to this definition">¶</a></dt>
+<dd><p>First performs a combination of the two above functions to find the slope, and then finds the intercept by maximizing a function</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.fitting.puredelay_fit">
+<tt class="descclassname">pynaural.signal.fitting.</tt><tt class="descname">puredelay_fit</tt><big>(</big><em>frequencies</em>, <em>phases</em>, <em>init=0.0</em>, <em>weights=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/fitting.html#puredelay_fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.fitting.puredelay_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>finds the best pure delay fit, it&#8217;s a <em>linear</em> (as in not affine) regression</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.fitting.circular_slope_maximization">
+<tt class="descclassname">pynaural.signal.fitting.</tt><tt class="descname">circular_slope_maximization</tt><big>(</big><em>frequencies</em>, <em>phases</em>, <em>init=0.0</em>, <em>weights=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/fitting.html#circular_slope_maximization"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.fitting.circular_slope_maximization" title="Permalink to this definition">¶</a></dt>
+<dd><p>given a good guess of the max, checks for a best max with scipy&#8217;s fmin function</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.fitting.weighed_linear_regression">
+<tt class="descclassname">pynaural.signal.fitting.</tt><tt class="descname">weighed_linear_regression</tt><big>(</big><em>x</em>, <em>y</em>, <em>weights=None</em>, <em>init=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/fitting.html#weighed_linear_regression"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.fitting.weighed_linear_regression" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a linear regression of y vs x, possibly weighed by <em>weights</em>.
+Returns (slope, intercept)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="acoustic-measurements">
+<h2>Acoustic measurements<a class="headerlink" href="#acoustic-measurements" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-pynaural.signal.measurement"></span><dl class="function">
+<dt id="pynaural.signal.measurement.deconvolve">
+<tt class="descclassname">pynaural.signal.measurement.</tt><tt class="descname">deconvolve</tt><big>(</big><em>signal</em>, <em>sweep</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/measurement.html#deconvolve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.measurement.deconvolve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deconvolves the second argument out of the first one.</p>
+<p>Usage:
+ir = deconvolve(signal, sweep)</p>
+<blockquote>
+<div></div></blockquote>
+<dl class="docutils">
+<dt>sweep &#8212;&gt; | system | &#8212;&gt; signal</dt>
+<dd></dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.measurement.swept_sine">
+<tt class="descclassname">pynaural.signal.measurement.</tt><tt class="descname">swept_sine</tt><big>(</big><em>fmin</em>, <em>fmax</em>, <em>samplerate</em>, <em>N</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/measurement.html#swept_sine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.measurement.swept_sine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a swept sine between fmin and fmax, at samplerate samplerate.
+N gives the length of the swept sine.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.measurement.excitation_signal">
+<tt class="descclassname">pynaural.signal.measurement.</tt><tt class="descname">excitation_signal</tt><big>(</big><em>T</em>, <em>f1</em>, <em>f2</em>, <em>samplerate</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/measurement.html#excitation_signal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.measurement.excitation_signal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Done according to marc&#8217;s paper,</p>
+</dd></dl>
+
+</div>
+<div class="section" id="smoothing">
+<h2>Smoothing<a class="headerlink" href="#smoothing" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pynaural.signal.bootstrapping">
+<span id="bootstrapping"></span><h2>Bootstrapping<a class="headerlink" href="#module-pynaural.signal.bootstrapping" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pynaural.signal.bootstrapping.sample_with_replacement">
+<tt class="descclassname">pynaural.signal.bootstrapping.</tt><tt class="descname">sample_with_replacement</tt><big>(</big><em>data</em>, <em>size=None</em>, <em>axis=-1</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/bootstrapping.html#sample_with_replacement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.bootstrapping.sample_with_replacement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a sample of the data of the same size by default.</p>
+<p><a href="#id1"><span class="problematic" id="id2">``</span></a>size&#8217;&#8217; : the size of the sample, defaults to the same size as the data
+<a href="#id3"><span class="problematic" id="id4">``</span></a>axis&#8217;&#8217; : if is is specified then lines/columns are returned. 
+If it is 1 then columns are returned, if 0 lines are returned.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.bootstrapping.bootstrap_cl_regression">
+<tt class="descclassname">pynaural.signal.bootstrapping.</tt><tt class="descname">bootstrap_cl_regression</tt><big>(</big><em>xdata</em>, <em>ydata</em>, <em>Nbootstrap=1000.0</em>, <em>slope_extent=None</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/bootstrapping.html#bootstrap_cl_regression"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.bootstrapping.bootstrap_cl_regression" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs multiple circular linear regressions on the data given in datax and datay
+xdata is the linear data
+ydata is the circular data</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pynaural.signal.bootstrapping.bootstrap_regression">
+<tt class="descclassname">pynaural.signal.bootstrapping.</tt><tt class="descname">bootstrap_regression</tt><big>(</big><em>xdata</em>, <em>ydata</em>, <em>Nbootstrap=1000</em>, <em>Nresargs=2</em><big>)</big><a class="reference internal" href="../_modules/pynaural/signal/bootstrapping.html#bootstrap_regression"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pynaural.signal.bootstrapping.bootstrap_regression" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs multiple linear regressions on the data given in datax and datay
+Nbootstrap : number of distributions to be re drawn
+Nresargs :  number of result arguments from the linregress function to be returned, defaults to 2 (slope, intercept)</p>
+<p>returns a 2d array, with each row</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="raytracer.html">Raytracer</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Signal processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="binaural.html">Raytracer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="geometry.html">Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="receivers.html">Receivers</a></li>
+</ul>
+</li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="raytracer.html" title="Raytracer"
+             >previous</a> |
+          <a href="binaural.html" title="Raytracer"
+             >next</a> |
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../genindex.html" title="General Index"
+             >index</a>
+            <br/>
+            <a href="../_sources/user/signal.txt"
+               rel="nofollow">Show Source</a>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer">
+        &copy; Copyright 2013, Victor Benichoux.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

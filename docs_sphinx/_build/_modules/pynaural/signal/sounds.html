@@ -1,0 +1,1145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pynaural.signal.sounds &mdash; Pynaural 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pynaural 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <div class="headertitle"><a
+          href="../../../index.html">Pynaural 0.1 documentation</a></div>
+        <div class="rel">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pynaural.signal.sounds</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">array</span> <span class="kn">as</span> <span class="nn">pyarray</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">scikits.audiolab.pysndfile._sndfile</span> <span class="kn">import</span> <span class="n">Sndfile</span>
+<span class="kn">from</span> <span class="nn">pynaural.io.soundlib</span> <span class="kn">import</span> <span class="n">get_default_audioserver</span>
+<span class="kn">from</span> <span class="nn">pynaural.utils.spatprefs</span> <span class="kn">import</span> <span class="n">get_pref</span>
+<span class="kn">from</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">fftconvolve</span><span class="p">,</span> <span class="n">lfilter</span>
+<span class="kn">from</span> <span class="nn">scipy.misc</span> <span class="kn">import</span> <span class="n">factorial</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">scikits.samplerate</span> <span class="kn">import</span> <span class="n">resample</span>
+    <span class="n">have_scikits_samplerate</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+    <span class="n">have_scikits_samplerate</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">This code is the same as the brian.hears Sound class except without the unit system, and also a different sound playing system.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Sound&#39;</span><span class="p">,</span>
+           <span class="s">&#39;pinknoise&#39;</span><span class="p">,</span><span class="s">&#39;brownnoise&#39;</span><span class="p">,</span><span class="s">&#39;powerlawnoise&#39;</span><span class="p">,</span>
+           <span class="s">&#39;whitenoise&#39;</span><span class="p">,</span> <span class="s">&#39;irns&#39;</span><span class="p">,</span> <span class="s">&#39;irno&#39;</span><span class="p">,</span>
+           <span class="s">&#39;tone&#39;</span><span class="p">,</span> <span class="s">&#39;click&#39;</span><span class="p">,</span> <span class="s">&#39;clicks&#39;</span><span class="p">,</span> <span class="s">&#39;silence&#39;</span><span class="p">,</span> <span class="s">&#39;sequence&#39;</span><span class="p">,</span> <span class="s">&#39;harmoniccomplex&#39;</span><span class="p">,</span>
+           <span class="s">&#39;loadsound&#39;</span><span class="p">,</span> <span class="s">&#39;savesound&#39;</span><span class="p">,</span> <span class="s">&#39;play&#39;</span><span class="p">,</span> <span class="s">&#39;vowel&#39;</span>
+           <span class="p">]</span>
+
+<div class="viewcode-block" id="Sound"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound">[docs]</a><span class="k">class</span> <span class="nc">Sound</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class for working with sounds, including loading/saving, manipulating and playing.</span>
+
+<span class="sd">    For an overview, see :ref:`sounds_overview`.</span>
+
+<span class="sd">    **Initialisation**</span>
+
+<span class="sd">    The following arguments are used to initialise a sound object</span>
+
+<span class="sd">    ``data``</span>
+<span class="sd">        Can be a filename, an array, a function or a sequence (list or tuple).</span>
+<span class="sd">        If its a filename, the sound file (WAV or AIFF) will be loaded. If its</span>
+<span class="sd">        an array, it should have shape ``(nsamples, nchannels)``. If its a</span>
+<span class="sd">        function, it should be a function f(t). If its a sequence, the items</span>
+<span class="sd">        in the sequence can be filenames, functions, arrays or Sound objects.</span>
+<span class="sd">        The output will be a multi-channel sound with channels the corresponding</span>
+<span class="sd">        sound for each element of the sequence.</span>
+<span class="sd">    ``samplerate=None``</span>
+<span class="sd">        The samplerate, if necessary, will use the default (for an array or</span>
+<span class="sd">        function) or the samplerate of the data (for a filename).</span>
+<span class="sd">    ``duration=None``</span>
+<span class="sd">        The duration of the sound, if initialising with a function.</span>
+
+<span class="sd">    **Loading, saving and playing**</span>
+
+<span class="sd">    .. automethod:: load</span>
+<span class="sd">    .. automethod:: save</span>
+<span class="sd">    .. automethod:: play</span>
+
+<span class="sd">    **Properties**</span>
+
+<span class="sd">    .. autoattribute:: duration</span>
+<span class="sd">    .. autoattribute:: nsamples</span>
+<span class="sd">    .. autoattribute:: nchannels</span>
+<span class="sd">    .. autoattribute:: times</span>
+<span class="sd">    .. autoattribute:: left</span>
+<span class="sd">    .. autoattribute:: right</span>
+<span class="sd">    .. automethod:: channel</span>
+
+<span class="sd">    **Generating sounds**</span>
+
+<span class="sd">    All sound generating methods can be used with durations arguments in samples (int) or units (e.g. 500*ms). One can also set the number of channels by setting the keyword argument nchannels to the desired value. Notice that for noise the channels will be generated independantly.</span>
+
+<span class="sd">    .. automethod:: tone</span>
+<span class="sd">    .. automethod:: whitenoise</span>
+<span class="sd">    .. automethod:: powerlawnoise</span>
+<span class="sd">    .. automethod:: brownnoise</span>
+<span class="sd">    .. automethod:: pinknoise</span>
+<span class="sd">    .. automethod:: silence</span>
+<span class="sd">    .. automethod:: click</span>
+<span class="sd">    .. automethod:: clicks</span>
+<span class="sd">    .. automethod:: harmoniccomplex</span>
+<span class="sd">    .. automethod:: vowel</span>
+
+<span class="sd">    **Timing and sequencing**</span>
+
+<span class="sd">    .. automethod:: sequence(*sounds, samplerate=None)</span>
+<span class="sd">    .. automethod:: repeat</span>
+<span class="sd">    .. automethod:: extended</span>
+<span class="sd">    .. automethod:: shifted</span>
+<span class="sd">    .. automethod:: resized</span>
+
+<span class="sd">    **Slicing**</span>
+
+
+<span class="sd">    One can slice sound objects in various ways, for example ``sound[100*ms:200*ms]``</span>
+<span class="sd">    returns the part of the sound between 100 ms and 200 ms (not including the</span>
+<span class="sd">    right hand end point). If the sound is less than 200 ms long it will be</span>
+<span class="sd">    zero padded. You can also set values using slicing, e.g.</span>
+<span class="sd">    ``sound[:50*ms] = 0`` will silence the first 50 ms of the sound. The syntax</span>
+<span class="sd">    is the same as usual for Python slicing. In addition, you can select a</span>
+<span class="sd">    subset of the channels by doing, for example, ``sound[:, -5:]`` would be</span>
+<span class="sd">    the last 5 channels. For time indices, either times or samples can be given,</span>
+<span class="sd">    e.g. ``sound[:100]`` gives the first 100 samples. In addition, steps can</span>
+<span class="sd">    be used for example to reverse a sound as ``sound[::-1]``.</span>
+
+<span class="sd">    **Arithmetic operations**</span>
+
+<span class="sd">    Standard arithemetical operations and numpy functions work as you would</span>
+<span class="sd">    expect with sounds, e.g. ``sound1+sound2``, ``3*sound`` or ``abs(sound)``.</span>
+
+<span class="sd">    **Level**</span>
+
+<span class="sd">    .. autoattribute:: level</span>
+<span class="sd">    .. automethod:: atlevel</span>
+<span class="sd">    .. autoattribute:: maxlevel</span>
+<span class="sd">    .. automethod:: atmaxlevel</span>
+
+<span class="sd">    **Ramping**</span>
+
+<span class="sd">    .. automethod:: ramp</span>
+<span class="sd">    .. automethod:: ramped</span>
+
+<span class="sd">    **Plotting**</span>
+
+<span class="sd">    .. automethod:: spectrogram</span>
+<span class="sd">    .. automethod:: spectrum</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">duration</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">fget</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span>
+                        <span class="n">doc</span><span class="o">=</span><span class="s">&#39;The length of the sound in seconds.&#39;</span><span class="p">)</span>
+    <span class="n">nsamples</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">fget</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span>
+                        <span class="n">doc</span><span class="o">=</span><span class="s">&#39;The number of samples in the sound.&#39;</span><span class="p">)</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">fget</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span>
+                     <span class="n">doc</span><span class="o">=</span><span class="s">&#39;An array of times (in seconds) corresponding to each sample.&#39;</span><span class="p">)</span>
+
+    <span class="n">left</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">fget</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                    <span class="n">doc</span><span class="o">=</span><span class="s">&#39;The left channel for a stereo sound.&#39;</span><span class="p">)</span>
+    <span class="n">right</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">fget</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                     <span class="n">doc</span><span class="o">=</span><span class="s">&#39;The right channel for a stereo sound.&#39;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="Sound.nchannels"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.nchannels">[docs]</a>    <span class="k">def</span> <span class="nf">nchannels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        The number of channels in the sound.</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</div>
+    <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+<span class="c">#            if samplerate is None:</span>
+<span class="c">#                raise ValueError(&#39;Must specify samplerate to initialise Sound with array.&#39;)</span>
+            <span class="k">if</span> <span class="n">duration</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Cannot specify duration when initialising Sound with array.&#39;</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">duration</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Cannot specify duration when initialising Sound from file.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">samplerate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Cannot specify samplerate when initialising Sound from a file.&#39;</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">samplerate</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">samplerate</span>
+        <span class="k">elif</span> <span class="nb">callable</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+<span class="c">#            if samplerate is None:</span>
+<span class="c">#                raise ValueError(&#39;Must specify samplerate to initialise Sound with function.&#39;)</span>
+            <span class="k">if</span> <span class="n">duration</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Must specify duration to initialise Sound with function.&#39;</span><span class="p">)</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">duration</span> <span class="o">*</span> <span class="n">samplerate</span><span class="p">))</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="n">samplerate</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">kwds</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">samplerate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">kwds</span><span class="p">[</span><span class="s">&#39;samplerate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">samplerate</span>
+            <span class="k">if</span> <span class="n">duration</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">kwds</span><span class="p">[</span><span class="s">&#39;duration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">duration</span>
+            <span class="n">channels</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">Sound</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">data</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span>
+            <span class="n">samplerate</span> <span class="o">=</span> <span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">samplerate</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;Cannot initialise Sound with data of class &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span>
+        <span class="n">x</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span>
+        <span class="n">x</span><span class="o">.</span><span class="n">buffer_init</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+    <span class="k">def</span> <span class="nf">__array_wrap__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">handled</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="o">.</span><span class="n">__array_wrap__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s">&#39;samplerate&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;samplerate&#39;</span><span class="p">):</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span>
+        <span class="k">if</span> <span class="n">context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">ufunc</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+    <span class="k">def</span> <span class="nf">__array_finalize__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">obj</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">obj</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s">&#39;samplerate&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">buffer_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">buffer_fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">start</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s">&#39;Can only use positive indices in buffer.&#39;</span><span class="p">)</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">end</span><span class="o">-</span><span class="n">start</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="p">)[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">&lt;</span><span class="n">samples</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">X</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">samples</span><span class="o">-</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))))</span>
+        <span class="k">return</span> <span class="n">X</span>
+
+<div class="viewcode-block" id="Sound.channel"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.channel">[docs]</a>    <span class="k">def</span> <span class="nf">channel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the nth channel of the sound.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="bp">self</span><span class="p">[:,</span> <span class="n">n</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Sound</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">):</span>
+                <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">int</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">):</span>
+                <span class="n">other</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
+                <span class="n">other</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">resized</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
+                <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resized</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="p">))</span>
+
+            <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="o">.</span><span class="n">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">),</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="o">.</span><span class="n">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+    <span class="n">__radd__</span> <span class="o">=</span> <span class="n">__add__</span>
+
+    <span class="c"># getslice and setslice need to be implemented for compatibility reasons,</span>
+    <span class="c"># but __getitem__ covers all the functionality so we just use that</span>
+    <span class="k">def</span> <span class="nf">__getslice__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__getitem__</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__setslice__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">seq</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__setitem__</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">),</span> <span class="n">seq</span><span class="p">)</span>
+
+    <span class="c">################## SLICING #######################</span>
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__getitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__setitem__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Sound.extended"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.extended">[docs]</a>    <span class="k">def</span> <span class="nf">extended</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">duration</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the Sound with length extended by the given duration, which</span>
+<span class="sd">        can be the number of samples or a length of time in seconds.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_duration</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">nsamples</span><span class="o">+</span><span class="n">duration</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Sound.resized"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.resized">[docs]</a>    <span class="k">def</span> <span class="nf">resized</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">L</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the Sound with length extended (or contracted) to have L samples.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">L</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="n">L</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="bp">self</span><span class="p">[:</span><span class="n">L</span><span class="p">,</span> <span class="p">:],</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">L</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="p">,</span> <span class="n">padding</span><span class="p">)),</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Sound.shifted"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.shifted">[docs]</a>    <span class="k">def</span> <span class="nf">shifted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">fractional</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">filter_length</span><span class="o">=</span><span class="mi">2048</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the sound delayed by duration, which can be the number of</span>
+<span class="sd">        samples or a length of time in seconds. Normally, only integer</span>
+<span class="sd">        numbers of samples will be used, but if ``fractional=True`` then</span>
+<span class="sd">        the filtering method from</span>
+<span class="sd">        `http://www.labbookpages.co.uk/audio/beamforming/fractionalDelay.html &lt;http://www.labbookpages.co.uk/audio/beamforming/fractionalDelay.html&gt;`__</span>
+<span class="sd">        will be used (introducing some small numerical errors). With this</span>
+<span class="sd">        method, you can specify the ``filter_length``, larger values are</span>
+<span class="sd">        slower but more accurate, especially at higher frequencies. The large</span>
+<span class="sd">        default value of 2048 samples provides good accuracy for sounds with</span>
+<span class="sd">        frequencies above 20 Hz, but not for lower frequency sounds. If you are</span>
+<span class="sd">        restricted to high frequency sounds, a smaller value will be more</span>
+<span class="sd">        efficient. Note that if ``fractional=True`` then</span>
+<span class="sd">        ``duration`` is assumed to be a time not a number of samples.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">fractional</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="n">duration</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">duration</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">duration</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">duration</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">)),</span> <span class="bp">self</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="o">-</span><span class="n">duration</span><span class="p">:,</span> <span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">sounds</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">shifted</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">fractional</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">filter_length</span><span class="o">=</span><span class="n">filter_length</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">)]</span>
+                <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">sounds</span><span class="p">),</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+            <span class="c"># Adapted from</span>
+            <span class="c"># http://www.labbookpages.co.uk/audio/beamforming/fractionalDelay.html</span>
+            <span class="n">delay</span> <span class="o">=</span> <span class="n">duration</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span>
+            <span class="k">if</span> <span class="n">delay</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">idelay</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">delay</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">idelay</span> <span class="o">=</span> <span class="o">-</span><span class="nb">int</span><span class="p">(</span><span class="o">-</span><span class="n">delay</span><span class="p">)</span>
+            <span class="n">delay</span> <span class="o">-=</span> <span class="n">idelay</span>
+            <span class="n">centre_tap</span> <span class="o">=</span> <span class="n">filter_length</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">filter_length</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">t</span><span class="o">-</span><span class="n">delay</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span><span class="o">-</span><span class="n">delay</span><span class="p">)</span><span class="o">&lt;</span><span class="mf">1e-10</span><span class="p">:</span>
+                <span class="n">tap_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="o">==</span><span class="n">centre_tap</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sinc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">centre_tap</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">centre_tap</span><span class="p">))</span>
+                <span class="n">window</span> <span class="o">=</span> <span class="mf">0.54</span><span class="o">-</span><span class="mf">0.46</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mf">2.0</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span><span class="o">/</span><span class="n">filter_length</span><span class="p">)</span> <span class="c"># Hamming window</span>
+                <span class="n">tap_weight</span> <span class="o">=</span> <span class="n">window</span><span class="o">*</span><span class="n">sinc</span>
+            <span class="k">if</span> <span class="n">filter_length</span><span class="o">&lt;</span><span class="mi">256</span><span class="p">:</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">tap_weight</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">fftconvolve</span><span class="p">(</span><span class="n">tap_weight</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">filter_length</span><span class="o">/</span><span class="mi">2</span><span class="p">:</span><span class="o">-</span><span class="n">filter_length</span><span class="o">/</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">sound</span> <span class="o">=</span> <span class="n">Sound</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+            <span class="n">sound</span> <span class="o">=</span> <span class="n">sound</span><span class="o">.</span><span class="n">shifted</span><span class="p">(</span><span class="n">idelay</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">sound</span>
+</div>
+<div class="viewcode-block" id="Sound.repeat"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.repeat">[docs]</a>    <span class="k">def</span> <span class="nf">repeat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Repeats the sound n times</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="p">,)</span><span class="o">*</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="Sound.resample"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.resample">[docs]</a>    <span class="k">def</span> <span class="nf">resample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">,</span> <span class="n">resample_type</span><span class="o">=</span><span class="s">&#39;sinc_best&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a resampled version of the sound.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">have_scikits_samplerate</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s">&#39;Need scikits.samplerate package for resampling&#39;</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">samplerate</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">),</span> <span class="n">resample_type</span><span class="p">),</span>
+                  <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="n">samplerate</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="Sound.play"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.play">[docs]</a>    <span class="k">def</span> <span class="nf">play</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sleep</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plays the sound (normalised to avoid clipping if required). If</span>
+<span class="sd">        sleep=True then the function will wait until the sound has finished</span>
+<span class="sd">        playing before returning.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c"># TODO rewrite using the audio servers here in pynaural</span>
+        <span class="n">serv</span> <span class="o">=</span> <span class="n">get_default_audioserver</span><span class="p">()</span>
+        <span class="n">serv</span><span class="o">.</span><span class="n">play</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sleep</span><span class="p">:</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Sound.spectrogram"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.spectrogram">[docs]</a>    <span class="k">def</span> <span class="nf">spectrogram</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">low</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">log_power</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">other</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>  <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plots a spectrogram of the sound</span>
+
+<span class="sd">        Arguments:</span>
+
+<span class="sd">        ``low=None``, ``high=None``</span>
+<span class="sd">            If these are left unspecified, it shows the full spectrogram,</span>
+<span class="sd">            otherwise it shows only between ``low`` and ``high`` in Hz.</span>
+<span class="sd">        ``log_power=True``</span>
+<span class="sd">            If True the colour represents the log of the power.</span>
+<span class="sd">        ``**kwds``</span>
+<span class="sd">            Are passed to Pylab&#39;s ``specgram`` command.</span>
+
+<span class="sd">        Returns the values returned by pylab&#39;s ``specgram``, namely</span>
+<span class="sd">        ``(pxx, freqs, bins, im)`` where ``pxx`` is a 2D array of powers,</span>
+<span class="sd">        ``freqs`` is the corresponding frequencies, ``bins`` are the time bins,</span>
+<span class="sd">        and ``im`` is the image axis.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Can only plot spectrograms for mono sounds.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">other</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">-</span><span class="n">other</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">pxx</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">im</span> <span class="o">=</span> <span class="n">specgram</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Fs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">low</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">high</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">restricted</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">if</span> <span class="n">low</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">low</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">high</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+            <span class="n">I</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">low</span> <span class="o">&lt;=</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">freqs</span> <span class="o">&lt;=</span> <span class="n">high</span><span class="p">)</span>
+            <span class="n">I2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">I</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">I2</span> <span class="o">=</span> <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">I2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">I2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="n">pxx</span><span class="p">[</span><span class="n">I2</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">I2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">restricted</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="n">pxx</span>
+        <span class="k">if</span> <span class="n">log_power</span><span class="p">:</span>
+            <span class="n">Z</span><span class="p">[</span><span class="n">Z</span> <span class="o">&lt;</span> <span class="mf">1e-20</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-20</span> <span class="c"># no zeros because we take logs</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">restricted</span><span class="p">:</span>
+            <span class="n">imshow</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">extent</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">bins</span><span class="p">),</span> <span class="n">freqs</span><span class="p">[</span><span class="n">I2</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">freqs</span><span class="p">[</span><span class="n">I2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]),</span>
+                   <span class="n">origin</span><span class="o">=</span><span class="s">&#39;upper&#39;</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="s">&#39;auto&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">imshow</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">extent</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">bins</span><span class="p">),</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">freqs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span>
+                   <span class="n">origin</span><span class="o">=</span><span class="s">&#39;upper&#39;</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="s">&#39;auto&#39;</span><span class="p">)</span>
+        <span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Time (s)&#39;</span><span class="p">)</span>
+        <span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Frequency (Hz)&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">pxx</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">im</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Sound.spectrum"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">low</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">log_power</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the spectrum of the sound and optionally plots it.</span>
+
+<span class="sd">        Arguments:</span>
+
+<span class="sd">        ``low``, ``high``</span>
+<span class="sd">            If these are left unspecified, it shows the full spectrum,</span>
+<span class="sd">            otherwise it shows only between ``low`` and ``high`` in Hz.</span>
+<span class="sd">        ``log_power=True``</span>
+<span class="sd">            If True it returns the log of the power.</span>
+<span class="sd">        ``display=False``</span>
+<span class="sd">            Whether to plot the output.</span>
+
+<span class="sd">        Returns ``(Z, freqs, phase)``</span>
+<span class="sd">        where ``Z`` is a 1D array of powers, ``freqs`` is the corresponding</span>
+<span class="sd">        frequencies, ``phase`` is the unwrapped phase of spectrum.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Can only plot spectrum for mono sounds.&#39;</span><span class="p">)</span>
+
+        <span class="c"># Flatten array, fft operates on the last axis by default</span>
+        <span class="n">sp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+        <span class="n">freqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sp</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="n">pxx</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unwrap</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">angle</span><span class="p">(</span><span class="n">sp</span><span class="p">),</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">low</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">high</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">restricted</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">if</span> <span class="n">low</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">low</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">high</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+            <span class="n">I</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">low</span> <span class="o">&lt;=</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">freqs</span> <span class="o">&lt;=</span> <span class="n">high</span><span class="p">)</span>
+            <span class="n">I2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">I</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="n">pxx</span><span class="p">[</span><span class="n">I2</span><span class="p">]</span>
+            <span class="n">freqs</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="n">I2</span><span class="p">]</span>
+            <span class="n">phase</span> <span class="o">=</span> <span class="n">phase</span><span class="p">[</span><span class="n">I2</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">restricted</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="n">pxx</span>
+        <span class="k">if</span> <span class="n">log_power</span><span class="p">:</span>
+            <span class="n">Z</span><span class="p">[</span><span class="n">Z</span> <span class="o">&lt;</span> <span class="mf">1e-20</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-20</span> <span class="c"># no zeros because we take logs</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">display</span><span class="p">:</span>
+            <span class="n">subplot</span><span class="p">(</span><span class="mi">211</span><span class="p">)</span>
+            <span class="n">semilogx</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">Z</span><span class="p">)</span>
+            <span class="n">ticks_freqs</span> <span class="o">=</span> <span class="mi">32000</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">18</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="n">xticks</span><span class="p">(</span><span class="n">ticks_freqs</span><span class="p">,</span> <span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">ticks_freqs</span><span class="p">))</span>
+            <span class="n">grid</span><span class="p">()</span>
+            <span class="n">xlim</span><span class="p">((</span><span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">freqs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Frequency (Hz)&#39;</span><span class="p">)</span>
+            <span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Power (dB/Hz)&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">log_power</span> <span class="k">else</span> <span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Power&#39;</span><span class="p">)</span>
+            <span class="n">subplot</span><span class="p">(</span><span class="mi">212</span><span class="p">)</span>
+            <span class="n">semilogx</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">phase</span><span class="p">)</span>
+            <span class="n">ticks_freqs</span> <span class="o">=</span> <span class="mi">32000</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">18</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="n">xticks</span><span class="p">(</span><span class="n">ticks_freqs</span><span class="p">,</span> <span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">ticks_freqs</span><span class="p">))</span>
+            <span class="n">grid</span><span class="p">()</span>
+            <span class="n">xlim</span><span class="p">((</span><span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">freqs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Frequency (Hz)&#39;</span><span class="p">)</span>
+            <span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Phase (rad)&#39;</span><span class="p">)</span>
+            <span class="n">show</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">phase</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Sound.get_level"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.get_level">[docs]</a>    <span class="k">def</span> <span class="nf">get_level</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns level in dB SPL (RMS) assuming array is in Pascals.</span>
+<span class="sd">        In the case of multi-channel sounds, returns an array of levels</span>
+<span class="sd">        for each channel, otherwise returns a float.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">rms_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">rms_dB</span> <span class="o">=</span> <span class="mf">20.0</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">rms_value</span><span class="o">/</span><span class="mf">2e-5</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">rms_dB</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">get_level</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">)))</span>
+</div>
+<div class="viewcode-block" id="Sound.set_level"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.set_level">[docs]</a>    <span class="k">def</span> <span class="nf">set_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Sets level in dB SPL (RMS) assuming array is in Pascals. ``level``</span>
+<span class="sd">        should be a value in dB, or a tuple of levels, one for each channel.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">rms_dB</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_level</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">level</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">level</span><span class="o">.</span><span class="n">size</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">level</span> <span class="o">=</span> <span class="n">level</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">)</span>
+            <span class="n">level</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">))</span>
+            <span class="n">rms_dB</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">rms_dB</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rms_dB</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rms_dB</span><span class="p">)</span>
+            <span class="n">level</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
+        <span class="n">gain</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="p">((</span><span class="n">level</span><span class="o">-</span><span class="n">rms_dB</span><span class="p">)</span><span class="o">/</span><span class="mf">20.</span><span class="p">)</span>
+        <span class="bp">self</span> <span class="o">*=</span> <span class="n">gain</span>
+</div>
+    <span class="n">level</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">fget</span><span class="o">=</span><span class="n">get_level</span><span class="p">,</span> <span class="n">fset</span><span class="o">=</span><span class="n">set_level</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s">&#39;&#39;&#39;</span>
+<span class="s">        Can be used to get or set the level of a sound, which should be in dB.</span>
+<span class="s">        For single channel sounds a value in dB is used, for multiple channel</span>
+<span class="s">        sounds a value in dB can be used for setting the level (all channels</span>
+<span class="s">        will be set to the same level), or a list/tuple/array of levels. It</span>
+<span class="s">        is assumed that the unit of the sound is Pascals.</span>
+<span class="s">        &#39;&#39;&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Sound.atlevel"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.atlevel">[docs]</a>    <span class="k">def</span> <span class="nf">atlevel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the sound at the given level in dB SPL (RMS) assuming array is</span>
+<span class="sd">        in Pascals. ``level`` should be a value in dB, or a tuple of levels,</span>
+<span class="sd">        one for each channel.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">newsound</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">newsound</span><span class="o">.</span><span class="n">level</span> <span class="o">=</span> <span class="n">level</span>
+        <span class="k">return</span> <span class="n">newsound</span>
+</div>
+    <span class="k">def</span> <span class="nf">get_maxlevel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_maxlevel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">level</span> <span class="o">+=</span> <span class="n">level</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">maxlevel</span>
+
+    <span class="n">maxlevel</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">fget</span><span class="o">=</span><span class="n">get_maxlevel</span><span class="p">,</span> <span class="n">fset</span><span class="o">=</span><span class="n">set_maxlevel</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s">&#39;&#39;&#39;</span>
+<span class="s">        Can be used to set or get the maximum level of a sound. For mono</span>
+<span class="s">        sounds, this is the same as the level, but for multichannel sounds</span>
+<span class="s">        it is the maximum level across the channels. Relative level differences</span>
+<span class="s">        will be preserved. The specified level should be a value in dB, and it</span>
+<span class="s">        is assumed that the unit of the sound is Pascals.</span>
+<span class="s">        &#39;&#39;&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Sound.atmaxlevel"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.atmaxlevel">[docs]</a>    <span class="k">def</span> <span class="nf">atmaxlevel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the sound with the maximum level across channels set to the</span>
+<span class="sd">        given level. Relative level differences will be preserved. The specified</span>
+<span class="sd">        level should be a value in dB and it is assumed that the unit of the</span>
+<span class="sd">        sound is Pascals.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">newsound</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">newsound</span><span class="o">.</span><span class="n">maxlevel</span> <span class="o">=</span> <span class="n">level</span>
+        <span class="k">return</span> <span class="n">newsound</span>
+</div>
+<div class="viewcode-block" id="Sound.ramp"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.ramp">[docs]</a>    <span class="k">def</span> <span class="nf">ramp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">when</span><span class="o">=</span><span class="s">&#39;onset&#39;</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">envelope</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Adds a ramp on/off to the sound</span>
+
+<span class="sd">        ``when=&#39;onset&#39;``</span>
+<span class="sd">            Can take values &#39;onset&#39;, &#39;offset&#39; or &#39;both&#39;</span>
+<span class="sd">        ``duration=10*ms``</span>
+<span class="sd">            The time over which the ramping happens</span>
+<span class="sd">        ``envelope``</span>
+<span class="sd">            A ramping function, if not specified uses ``sin(pi*t/2)**2``. The</span>
+<span class="sd">            function should be a function of one variable ``t`` ranging from</span>
+<span class="sd">            0 to 1, and should increase from ``f(0)=0`` to ``f(0)=1``. The</span>
+<span class="sd">            reverse is applied for the offset ramp.</span>
+<span class="sd">        ``inplace``</span>
+<span class="sd">            Whether to apply ramping to current sound or return a new array.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">when</span> <span class="o">=</span> <span class="n">when</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">envelope</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="n">envelope</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">t</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">sz</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">duration</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sz</span> <span class="o">=</span> <span class="n">duration</span>
+        <span class="n">multiplier</span> <span class="o">=</span> <span class="n">envelope</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">sz</span><span class="p">),</span> <span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">inplace</span><span class="p">:</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">Sound</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">when</span> <span class="o">==</span> <span class="s">&#39;onset&#39;</span> <span class="ow">or</span> <span class="n">when</span> <span class="o">==</span> <span class="s">&#39;both&#39;</span><span class="p">:</span>
+            <span class="n">target</span><span class="p">[:</span><span class="n">sz</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*=</span> <span class="n">multiplier</span>
+        <span class="k">if</span> <span class="n">when</span> <span class="o">==</span> <span class="s">&#39;offset&#39;</span> <span class="ow">or</span> <span class="n">when</span> <span class="o">==</span> <span class="s">&#39;both&#39;</span><span class="p">:</span>
+            <span class="n">target</span><span class="p">[</span><span class="n">target</span><span class="o">.</span><span class="n">nsamples</span><span class="o">-</span><span class="n">sz</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">*=</span> <span class="n">multiplier</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">target</span>
+</div>
+<div class="viewcode-block" id="Sound.ramped"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.ramped">[docs]</a>    <span class="k">def</span> <span class="nf">ramped</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">when</span><span class="o">=</span><span class="s">&#39;onset&#39;</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">envelope</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a ramped version of the sound (see :meth:`Sound.ramp`).</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ramp</span><span class="p">(</span><span class="n">when</span><span class="o">=</span><span class="n">when</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="n">duration</span><span class="p">,</span> <span class="n">envelope</span><span class="o">=</span><span class="n">envelope</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Sound.fft"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.fft">[docs]</a>    <span class="k">def</span> <span class="nf">fft</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">n</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Performs an n-point FFT on the sound object, that is an array of the same size containing the DFT of each channel. n defaults to the number of samples of the sound, but can be changed manually setting the ``n`` keyword argument</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">res</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">):</span>
+            <span class="n">res</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="p">)[:,</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span><span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.tone"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.tone">[docs]</a>    <span class="k">def</span> <span class="nf">tone</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a pure tone at frequency for duration, using the default</span>
+<span class="sd">        samplerate or the given one. The ``frequency`` and ``phase`` parameters</span>
+<span class="sd">        can be single values, in which case multiple channels can be</span>
+<span class="sd">        specified with the ``nchannels`` argument, or they can be sequences</span>
+<span class="sd">        (lists/tuples/arrays) in which case there is one frequency or phase for</span>
+<span class="sd">        each channel.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_duration</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="n">frequency</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">phase</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="o">&gt;</span><span class="n">nchannels</span> <span class="ow">and</span> <span class="n">nchannels</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">nchannels</span> <span class="o">=</span> <span class="n">frequency</span><span class="o">.</span><span class="n">size</span>
+        <span class="k">if</span> <span class="n">phase</span><span class="o">.</span><span class="n">size</span><span class="o">&gt;</span><span class="n">nchannels</span> <span class="ow">and</span> <span class="n">nchannels</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">nchannels</span> <span class="o">=</span> <span class="n">phase</span><span class="o">.</span><span class="n">size</span>
+        <span class="k">if</span> <span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="o">==</span><span class="n">nchannels</span><span class="p">:</span>
+            <span class="n">frequency</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">nchannels</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">phase</span><span class="o">.</span><span class="n">size</span><span class="o">==</span><span class="n">nchannels</span><span class="p">:</span>
+            <span class="n">phase</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span><span class="p">(</span><span class="n">nchannels</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">samplerate</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c"># ensures C-order (in contrast to tile(...).T )</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phase</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">frequency</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">nchannels</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.harmoniccomplex"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.harmoniccomplex">[docs]</a>    <span class="k">def</span> <span class="nf">harmoniccomplex</span><span class="p">(</span><span class="n">f0</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">amplitude</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a harmonic complex composed of pure tones at integer multiples</span>
+<span class="sd">        of the fundamental frequency ``f0``.</span>
+<span class="sd">        The ``amplitude`` and</span>
+<span class="sd">        ``phase`` keywords can be set to either a single value or an</span>
+<span class="sd">        array of values. In the former case the value is set for all</span>
+<span class="sd">        harmonics, and harmonics up to the sampling frequency are</span>
+<span class="sd">        generated. In the latter each harmonic parameter is set</span>
+<span class="sd">        separately, and the number of harmonics generated corresponds</span>
+<span class="sd">        to the length of the array.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">samplerate</span><span class="o">=</span><span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+
+        <span class="n">phases</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">phase</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">amplitudes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">amplitude</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">phases</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">amplitudes</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phases</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">amplitudes</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phases</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">amplitudes</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Please specify the same number of phases and amplitudes&#39;</span><span class="p">)</span>
+            <span class="n">Nharmonics</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phases</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">amplitudes</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Nharmonics</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span> <span class="n">samplerate</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">f0</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">phases</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">phases</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">phase</span><span class="p">,</span> <span class="n">Nharmonics</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">amplitudes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">amplitudes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">amplitude</span><span class="p">,</span> <span class="n">Nharmonics</span><span class="p">)</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="n">amplitudes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">tone</span><span class="p">(</span><span class="n">f0</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">phase</span> <span class="o">=</span> <span class="n">phases</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">,</span> <span class="n">nchannels</span> <span class="o">=</span> <span class="n">nchannels</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">Nharmonics</span><span class="p">):</span>
+            <span class="n">x</span> <span class="o">+=</span> <span class="n">amplitudes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">tone</span><span class="p">((</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">f0</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">phase</span> <span class="o">=</span> <span class="n">phases</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                    <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">,</span> <span class="n">nchannels</span> <span class="o">=</span> <span class="n">nchannels</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.whitenoise"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.whitenoise">[docs]</a>    <span class="k">def</span> <span class="nf">whitenoise</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a white noise. If the samplerate is not specified, the global</span>
+<span class="sd">        default value will be used.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_duration</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span><span class="n">nchannels</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.powerlawnoise"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.powerlawnoise">[docs]</a>    <span class="k">def</span> <span class="nf">powerlawnoise</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">normalise</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a power-law noise for the given duration. Spectral density per unit of bandwidth scales as 1/(f**alpha).</span>
+
+<span class="sd">        Sample usage::</span>
+
+<span class="sd">            noise = powerlawnoise(200*ms, 1, samplerate=44100*Hz)</span>
+
+<span class="sd">        Arguments:</span>
+
+<span class="sd">        ``duration``</span>
+<span class="sd">            Duration of the desired output.</span>
+<span class="sd">        ``alpha``</span>
+<span class="sd">            Power law exponent.</span>
+<span class="sd">        ``samplerate``</span>
+<span class="sd">            Desired output samplerate</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_duration</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span><span class="n">samplerate</span><span class="p">)</span>
+
+        <span class="c"># Adapted from http://www.eng.ox.ac.uk/samp/software/powernoise/powernoise.m</span>
+        <span class="c"># Little MA et al. (2007), &quot;Exploiting nonlinear recurrence and fractal</span>
+        <span class="c"># scaling properties for voice disorder detection&quot;, Biomed Eng Online, 6:23</span>
+        <span class="n">n</span><span class="o">=</span><span class="n">duration</span>
+        <span class="n">n2</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">f</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftfreq</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">d</span><span class="o">=</span><span class="mf">1.0</span><span class="o">/</span><span class="n">samplerate</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">),</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">f</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="n">nchannels</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">n</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">z</span><span class="o">=</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n2</span><span class="p">,</span><span class="n">nchannels</span><span class="p">)</span><span class="o">+</span><span class="mi">1j</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n2</span><span class="p">,</span><span class="n">nchannels</span><span class="p">))</span>
+            <span class="n">a2</span><span class="o">=</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span> <span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">:(</span><span class="n">n2</span><span class="o">+</span><span class="mi">1</span><span class="p">),:]</span><span class="o">**</span><span class="p">(</span><span class="n">alpha</span><span class="o">/</span><span class="mf">2.0</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">z</span><span class="o">=</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n2</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">nchannels</span><span class="p">)</span><span class="o">+</span><span class="mi">1j</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n2</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">nchannels</span><span class="p">))</span>
+            <span class="n">a2</span><span class="o">=</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">n2</span><span class="p">,:]</span><span class="o">**</span><span class="p">(</span><span class="n">alpha</span><span class="o">/</span><span class="mf">2.0</span><span class="p">))</span>
+
+        <span class="n">a2</span><span class="o">*=</span><span class="n">z</span>
+
+        <span class="k">if</span> <span class="n">n</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">d</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="n">nchannels</span><span class="p">)),</span><span class="n">a2</span><span class="p">,</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">a2</span><span class="p">))))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">d</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="n">nchannels</span><span class="p">)),</span><span class="n">a2</span><span class="p">,</span>
+                      <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span> <span class="nb">abs</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="n">n2</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="n">alpha</span><span class="o">/</span><span class="mf">2.0</span><span class="p">)</span> <span class="p">)</span><span class="o">*</span>
+                      <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">nchannels</span><span class="p">),</span>
+                      <span class="n">np</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">a2</span><span class="p">))))</span>
+
+
+        <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+        <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">nchannels</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">normalise</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nchannels</span><span class="p">):</span>
+                <span class="c">#x[:,i]=normalise_rms(x[:,i])</span>
+                <span class="n">x</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">x</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">amin</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span><span class="n">i</span><span class="p">]))</span><span class="o">/</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span><span class="n">i</span><span class="p">])</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">amin</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span><span class="n">i</span><span class="p">]))</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">;</span>
+
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">samplerate</span><span class="p">)</span>
+
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.pinknoise"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.pinknoise">[docs]</a>    <span class="k">def</span> <span class="nf">pinknoise</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">normalise</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns pink noise, i.e :func:`powerlawnoise` with alpha=1</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="o">.</span><span class="n">powerlawnoise</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="n">samplerate</span><span class="p">,</span>
+                                   <span class="n">nchannels</span><span class="o">=</span><span class="n">nchannels</span><span class="p">,</span> <span class="n">normalise</span><span class="o">=</span><span class="n">normalise</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.brownnoise"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.brownnoise">[docs]</a>    <span class="k">def</span> <span class="nf">brownnoise</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">normalise</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns brown noise, i.e :func:`powerlawnoise` with alpha=2</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="o">.</span><span class="n">powerlawnoise</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="n">samplerate</span><span class="p">,</span>
+                                   <span class="n">nchannels</span><span class="o">=</span><span class="n">nchannels</span><span class="p">,</span> <span class="n">normalise</span><span class="o">=</span><span class="n">normalise</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.irns"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.irns">[docs]</a>    <span class="k">def</span> <span class="nf">irns</span><span class="p">(</span><span class="n">delay</span><span class="p">,</span> <span class="n">gain</span><span class="p">,</span> <span class="n">niter</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns an IRN_S noise. The iterated ripple noise is obtained trough</span>
+<span class="sd">        a cascade of gain and delay filtering.</span>
+<span class="sd">        For more details: see Yost 1996 or chapter 15 in Hartman Sound Signal Sensation.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">nchannels</span><span class="o">!=</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;nchannels!=1 not supported.&quot;</span><span class="p">)</span>
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+        <span class="n">noise</span><span class="o">=</span><span class="n">Sound</span><span class="o">.</span><span class="n">whitenoise</span><span class="p">(</span><span class="n">duration</span><span class="p">)</span>
+        <span class="n">splrate</span><span class="o">=</span><span class="n">noise</span><span class="o">.</span><span class="n">samplerate</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">noise</span><span class="o">.</span><span class="n">T</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">IRNfft</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">Nspl</span><span class="p">,</span><span class="n">spl_dur</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">IRNfft</span><span class="p">),</span><span class="nb">float</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">splrate</span><span class="p">)</span>
+        <span class="n">w</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftfreq</span><span class="p">(</span><span class="n">Nspl</span><span class="p">,</span><span class="n">spl_dur</span><span class="p">)</span>
+        <span class="n">d</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">niter</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">nchoosek</span><span class="o">=</span><span class="n">factorial</span><span class="p">(</span><span class="n">niter</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">factorial</span><span class="p">(</span><span class="n">niter</span><span class="o">-</span><span class="n">k</span><span class="p">)</span><span class="o">*</span><span class="n">factorial</span><span class="p">(</span><span class="n">k</span><span class="p">))</span>
+            <span class="n">IRNfft</span><span class="o">+=</span><span class="n">nchoosek</span><span class="o">*</span><span class="p">(</span><span class="n">gain</span><span class="o">**</span><span class="n">k</span><span class="p">)</span><span class="o">*</span><span class="n">IRNfft</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1j</span><span class="o">*</span><span class="n">w</span><span class="o">*</span><span class="n">k</span><span class="o">*</span><span class="n">d</span><span class="p">)</span>
+        <span class="n">IRNadd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft</span><span class="p">(</span><span class="n">IRNfft</span><span class="p">)</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">IRNadd</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.irno"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.irno">[docs]</a>    <span class="k">def</span> <span class="nf">irno</span><span class="p">(</span><span class="n">delay</span><span class="p">,</span> <span class="n">gain</span><span class="p">,</span> <span class="n">niter</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns an IRN_O noise. The iterated ripple noise is obtained many attenuated and</span>
+<span class="sd">        delayed version of the original broadband noise.</span>
+<span class="sd">        For more details: see Yost 1996 or chapter 15 in Hartman Sound Signal Sensation.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+        <span class="n">noise</span><span class="o">=</span><span class="n">Sound</span><span class="o">.</span><span class="n">whitenoise</span><span class="p">(</span><span class="n">duration</span><span class="p">)</span>
+        <span class="n">splrate</span><span class="o">=</span><span class="n">noise</span><span class="o">.</span><span class="n">samplerate</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">noise</span><span class="o">.</span><span class="n">T</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">IRNadd</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">Nspl</span><span class="p">,</span><span class="n">spl_dur</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">IRNadd</span><span class="p">),</span><span class="nb">float</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">splrate</span><span class="p">)</span>
+        <span class="n">w</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">fftfreq</span><span class="p">(</span><span class="n">Nspl</span><span class="p">,</span><span class="n">spl_dur</span><span class="p">)</span>
+        <span class="n">d</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">niter</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">IRNadd</span><span class="o">+=</span><span class="p">(</span><span class="n">gain</span><span class="o">**</span><span class="n">k</span><span class="p">)</span><span class="o">*</span><span class="n">IRNadd</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1j</span><span class="o">*</span><span class="n">w</span><span class="o">*</span><span class="n">k</span><span class="o">*</span><span class="n">d</span><span class="p">)</span>
+        <span class="n">IRNadd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft</span><span class="p">(</span><span class="n">IRNadd</span><span class="p">)</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">IRNadd</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.click"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.click">[docs]</a>    <span class="k">def</span> <span class="nf">click</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">peak</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a click of the given duration.</span>
+
+<span class="sd">        If ``peak`` is not specified, the amplitude will be 1, otherwise</span>
+<span class="sd">        ``peak`` refers to the peak dB SPL of the click, according to the</span>
+<span class="sd">        formula ``28e-6*10**(peak/20.)``.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_duration</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">peak</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">amplitude</span> <span class="o">=</span> <span class="mf">28e-6</span><span class="o">*</span><span class="mi">10</span><span class="o">**</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">peak</span><span class="p">)</span><span class="o">/</span><span class="mf">20.</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">amplitude</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">amplitude</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">duration</span><span class="p">,</span><span class="n">nchannels</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.clicks"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.clicks">[docs]</a>    <span class="k">def</span> <span class="nf">clicks</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">interval</span><span class="p">,</span> <span class="n">peak</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a series of n clicks (see :func:`click`) separated by interval.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">oneclick</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">click</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">peak</span><span class="o">=</span><span class="n">peak</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">oneclick</span><span class="p">[:</span><span class="n">interval</span><span class="p">]</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.silence"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.silence">[docs]</a>    <span class="k">def</span> <span class="nf">silence</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a silent, zero sound for the given duration. Set nchannels to set the number of channels.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_duration</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span><span class="n">samplerate</span><span class="p">)</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">duration</span><span class="p">,</span><span class="n">nchannels</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.vowel"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.vowel">[docs]</a>    <span class="k">def</span> <span class="nf">vowel</span><span class="p">(</span><span class="n">vowel</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">formants</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">pitch</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+          <span class="n">samplerate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns an artifically created spoken vowel sound (following the</span>
+<span class="sd">        source-filter model of speech production) with a given ``pitch``.</span>
+
+<span class="sd">        The vowel can be specified by either providing ``vowel`` as a string</span>
+<span class="sd">        (&#39;a&#39;, &#39;i&#39; or &#39;u&#39;) or by setting ``formants`` to a sequence of formant</span>
+<span class="sd">        frequencies.</span>
+
+<span class="sd">        The returned sound is normalized to a maximum amplitude of 1.</span>
+
+<span class="sd">        The implementation is based on the MakeVowel function written by Richard</span>
+<span class="sd">        O. Duda, part of the Auditory Toolbox for Matlab by Malcolm Slaney:</span>
+<span class="sd">        http://cobweb.ecn.purdue.edu/~malcolm/interval/1998-010/</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span> <span class="ow">or</span> <span class="n">get_pref</span><span class="p">(</span><span class="s">&#39;DEFAULT_SAMPLERATE&#39;</span><span class="p">)</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_duration</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">vowel</span> <span class="ow">or</span> <span class="n">formants</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Need either a vowel or a list of formants&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">vowel</span> <span class="ow">and</span> <span class="n">formants</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Cannot use both vowel and formants&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">vowel</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">vowel</span> <span class="o">==</span> <span class="s">&#39;a&#39;</span> <span class="ow">or</span> <span class="n">vowel</span> <span class="o">==</span> <span class="s">&#39;/a/&#39;</span><span class="p">:</span>
+                <span class="n">formants</span> <span class="o">=</span> <span class="p">(</span><span class="mf">730.0</span><span class="p">,</span> <span class="mf">1090.0</span><span class="p">,</span> <span class="mf">2440.0</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">vowel</span> <span class="o">==</span> <span class="s">&#39;i&#39;</span> <span class="ow">or</span> <span class="n">vowel</span> <span class="o">==</span> <span class="s">&#39;/i/&#39;</span><span class="p">:</span>
+                <span class="n">formants</span> <span class="o">=</span> <span class="p">(</span><span class="mf">270.0</span><span class="p">,</span> <span class="mf">2290.0</span><span class="p">,</span> <span class="mf">3010.0</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">vowel</span> <span class="o">==</span> <span class="s">&#39;u&#39;</span> <span class="ow">or</span> <span class="n">vowel</span> <span class="o">==</span> <span class="s">&#39;/u/&#39;</span><span class="p">:</span>
+                <span class="n">formants</span> <span class="o">=</span> <span class="p">(</span><span class="mf">300.0</span><span class="p">,</span> <span class="mf">870.0</span><span class="p">,</span> <span class="mf">2240.0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Unknown vowel: &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">vowel</span><span class="p">))</span>
+
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">duration</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">samplerate</span> <span class="o">/</span> <span class="n">pitch</span><span class="p">)</span>
+
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">duration</span><span class="p">)</span>
+
+        <span class="n">y</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">indices</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">points</span>
+        <span class="n">y</span><span class="p">[</span><span class="n">indices</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">points</span> <span class="o">-</span> <span class="n">indices</span>
+
+        <span class="c"># model the sound source (periodic glottal excitation)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">250.</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">samplerate</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">lfilter</span><span class="p">([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">a</span> <span class="o">*</span> <span class="n">a</span><span class="p">],</span> <span class="n">y</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+
+        <span class="c"># model the filtering by the vocal tract</span>
+        <span class="n">bandwidth</span> <span class="o">=</span> <span class="mf">50.</span>
+
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">formants</span><span class="p">:</span>
+            <span class="n">cft</span> <span class="o">=</span> <span class="n">f</span> <span class="o">/</span> <span class="n">samplerate</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">f</span> <span class="o">/</span> <span class="n">bandwidth</span>
+            <span class="n">rho</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">cft</span> <span class="o">/</span> <span class="n">q</span><span class="p">)</span>
+            <span class="n">theta</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">cft</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mf">4.0</span> <span class="o">*</span> <span class="n">q</span> <span class="o">*</span> <span class="n">q</span><span class="p">))</span>
+            <span class="n">a2</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+            <span class="n">a3</span> <span class="o">=</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">rho</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">lfilter</span><span class="p">([</span><span class="mi">1</span> <span class="o">+</span> <span class="n">a2</span> <span class="o">+</span> <span class="n">a3</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">a2</span><span class="p">,</span> <span class="n">a3</span><span class="p">],</span> <span class="n">y</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+
+        <span class="c">#normalize sound</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">y</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">nchannels</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>  <span class="n">samplerate</span><span class="o">=</span><span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.sequence"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.sequence">[docs]</a>    <span class="k">def</span> <span class="nf">sequence</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the sequence of sounds in the list sounds joined together</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">kwds</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;samplerate&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwds</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;Unexpected keywords to function sequence()&#39;</span><span class="p">)</span>
+        <span class="n">sounds</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="n">sounds</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sounds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">samplerate</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">samplerate</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">samplerate</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sounds</span><span class="p">)</span>
+            <span class="n">rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sounds</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rates</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">sounds</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">samplerate</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sounds</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">sounds</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Sound.save"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">normalise</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">samplewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Save the sound as a WAV.</span>
+
+<span class="sd">        If the normalise keyword is set to True, the amplitude of the sound will be</span>
+<span class="sd">        normalised to 1. The samplewidth keyword can be 1 or 2 to save the data as</span>
+<span class="sd">        8 or 16 bit samples.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ext</span><span class="o">==</span><span class="s">&#39;wav&#39;</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">wave</span> <span class="kn">as</span> <span class="nn">sndmodule</span>
+        <span class="k">elif</span> <span class="n">ext</span><span class="o">==</span><span class="s">&#39;aiff&#39;</span> <span class="ow">or</span> <span class="n">ext</span><span class="o">==</span><span class="s">&#39;aifc&#39;</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">aifc</span> <span class="kn">as</span> <span class="nn">sndmodule</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&#39;Can only save as wav soundfiles&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&#39;Can only save as wav soundfiles&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">samplewidth</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">samplewidth</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Sample width must be 1 or 2 bytes.&#39;</span><span class="p">)</span>
+
+        <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2</span><span class="p">:</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">7</span><span class="o">-</span><span class="mi">1</span><span class="p">}[</span><span class="n">samplewidth</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">ext</span><span class="o">==</span><span class="s">&#39;wav&#39;</span><span class="p">:</span>
+            <span class="n">meanval</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">2</span><span class="o">**</span><span class="mi">7</span><span class="p">}[</span><span class="n">samplewidth</span><span class="p">]</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">}[</span><span class="n">samplewidth</span><span class="p">]</span>
+            <span class="n">typecode</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2</span><span class="p">:</span><span class="s">&#39;h&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="s">&#39;B&#39;</span><span class="p">}[</span><span class="n">samplewidth</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">meanval</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">2</span><span class="o">**</span><span class="mi">7</span><span class="p">}[</span><span class="n">samplewidth</span><span class="p">]</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">}[</span><span class="n">samplewidth</span><span class="p">]</span>
+            <span class="n">typecode</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2</span><span class="p">:</span><span class="s">&#39;h&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="s">&#39;B&#39;</span><span class="p">}[</span><span class="n">samplewidth</span><span class="p">]</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">sndmodule</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">)</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">setnchannels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">)</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">setsampwidth</span><span class="p">(</span><span class="n">samplewidth</span><span class="p">)</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">setframerate</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">copy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">am</span>  <span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">normalise</span><span class="p">:</span>
+                <span class="n">x</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">/=</span> <span class="n">am</span>
+            <span class="n">x</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">[:,</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="n">scale</span> <span class="o">+</span> <span class="n">meanval</span>
+            <span class="n">z</span><span class="p">[</span><span class="n">i</span><span class="p">::</span><span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">[::</span><span class="mi">1</span><span class="p">,</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pyarray</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">typecode</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">writeframes</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">tostring</span><span class="p">())</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Sound.load"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.Sound.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Load the file given by filename and returns a Sound object.</span>
+<span class="sd">        Sound file can be either a .wav or a .aif file.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c"># using scikits.audiolab works most of the time...</span>
+        <span class="n">f1</span> <span class="o">=</span> <span class="n">Sndfile</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+        <span class="n">samplerate</span> <span class="o">=</span> <span class="n">f1</span><span class="o">.</span><span class="n">samplerate</span>
+        <span class="n">sound</span> <span class="o">=</span> <span class="n">f1</span><span class="o">.</span><span class="n">read_frames</span><span class="p">(</span><span class="n">f1</span><span class="o">.</span><span class="n">nframes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">sound</span><span class="p">,</span> <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">arrayrep</span> <span class="o">=</span> <span class="nb">repr</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="n">arrayrep</span> <span class="o">=</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;    &#39;</span><span class="o">+</span><span class="n">l</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">arrayrep</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="s">&#39;Sound(</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">+</span><span class="n">arrayrep</span><span class="o">+</span><span class="s">&#39;,</span><span class="se">\n</span><span class="s">    &#39;</span><span class="o">+</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;Sound duration </span><span class="si">%s</span><span class="s">, channels </span><span class="si">%s</span><span class="s">, samplerate </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span>
+                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">nchannels</span><span class="p">,</span>
+                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">_load_Sound_from_pickle</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)))</span>
+
+</div>
+<span class="k">def</span> <span class="nf">_load_Sound_from_pickle</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Sound</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="n">samplerate</span><span class="p">)</span>
+
+<div class="viewcode-block" id="play"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.play">[docs]</a><span class="k">def</span> <span class="nf">play</span><span class="p">(</span><span class="o">*</span><span class="n">sounds</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Plays a sound or sequence of sounds. For example::</span>
+
+<span class="sd">        play(sound)</span>
+<span class="sd">        play(sound1, sound2)</span>
+<span class="sd">        play([sound1, sound2, sound3])</span>
+
+<span class="sd">    If ``normalise=True``, the sequence of sounds will be normalised to the</span>
+<span class="sd">    maximum range (-1 to 1), and if ``sleep=True`` the function will wait</span>
+<span class="sd">    until the sounds have finished playing before returning.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">normalise</span> <span class="o">=</span> <span class="n">kwds</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;normalise&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="n">sleep</span> <span class="o">=</span> <span class="n">kwds</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;sleep&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;Unexpected keyword arguments to function play()&#39;</span><span class="p">)</span>
+    <span class="n">sound</span> <span class="o">=</span> <span class="n">sequence</span><span class="p">(</span><span class="o">*</span><span class="n">sounds</span><span class="p">)</span>
+
+    <span class="n">sound</span><span class="o">.</span><span class="n">play</span><span class="p">(</span><span class="n">normalise</span><span class="o">=</span><span class="n">normalise</span><span class="p">,</span> <span class="n">sleep</span><span class="o">=</span><span class="n">sleep</span><span class="p">)</span>
+</div>
+<span class="n">play</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">play</span><span class="o">.</span><span class="n">__doc__</span>
+
+<div class="viewcode-block" id="savesound"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.sounds.savesound">[docs]</a><span class="k">def</span> <span class="nf">savesound</span><span class="p">(</span><span class="n">sound</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">normalise</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">samplewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="n">sound</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">normalise</span><span class="o">=</span><span class="n">normalise</span><span class="p">,</span> <span class="n">samplewidth</span><span class="o">=</span><span class="n">samplewidth</span><span class="p">)</span></div>
+<span class="n">savesound</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">save</span><span class="o">.</span><span class="n">__doc__</span>
+
+<span class="k">def</span> <span class="nf">get_duration</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span><span class="n">samplerate</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">duration</span> <span class="o">*</span> <span class="n">samplerate</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">duration</span>
+
+
+<span class="n">whitenoise</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">whitenoise</span>
+<span class="n">powerlawnoise</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">powerlawnoise</span>
+<span class="n">pinknoise</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">pinknoise</span>
+<span class="n">brownnoise</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">brownnoise</span>
+<span class="n">irns</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">irns</span>
+<span class="n">irno</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">irno</span>
+<span class="n">tone</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">tone</span>
+<span class="n">harmoniccomplex</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">harmoniccomplex</span>
+<span class="n">click</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">click</span>
+<span class="n">clicks</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">clicks</span>
+<span class="n">silence</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">silence</span>
+<span class="n">sequence</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">sequence</span>
+<span class="n">vowel</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">vowel</span>
+<span class="n">loadsound</span> <span class="o">=</span> <span class="n">Sound</span><span class="o">.</span><span class="n">load</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user/index.html">User Guide</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             >index</a>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer">
+        &copy; Copyright 2013, Victor Benichoux.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

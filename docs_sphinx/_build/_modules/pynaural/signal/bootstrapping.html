@@ -1,0 +1,176 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pynaural.signal.bootstrapping &mdash; Pynaural 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pynaural 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <div class="headertitle"><a
+          href="../../../index.html">Pynaural 0.1 documentation</a></div>
+        <div class="rel">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pynaural.signal.bootstrapping</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">pynaural.signal.fitting</span> <span class="kn">import</span> <span class="n">circular_linear_regression</span>
+<span class="kn">from</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;sample_with_replacement&#39;</span><span class="p">,</span> <span class="s">&#39;bootstrap&#39;</span><span class="p">,</span> <span class="s">&#39;bootstrap_cl_regression&#39;</span><span class="p">,</span> <span class="s">&#39;bootstrap_regression&#39;</span><span class="p">]</span>
+
+<span class="c">################################ BOOTSTRAP #############################</span>
+
+<div class="viewcode-block" id="sample_with_replacement"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.bootstrapping.sample_with_replacement">[docs]</a><span class="k">def</span> <span class="nf">sample_with_replacement</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Takes a sample of the data of the same size by default.</span>
+<span class="sd">    </span>
+<span class="sd">    ``size&#39;&#39; : the size of the sample, defaults to the same size as the data</span>
+<span class="sd">    ``axis&#39;&#39; : if is is specified then lines/columns are returned. </span>
+<span class="sd">    If it is 1 then columns are returned, if 0 lines are returned.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">datasize</span> <span class="o">=</span>  <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">size</span> <span class="o">=</span>  <span class="n">datasize</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">datasize</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">size</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">flatten</span><span class="p">()[</span><span class="n">indices</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">datasize</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">size</span> <span class="o">=</span>  <span class="n">datasize</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">datasize</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">size</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="n">indices</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">elif</span> <span class="n">axis</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">data</span><span class="p">[:,</span> <span class="n">indices</span><span class="p">]</span>
+</div>
+<span class="k">def</span> <span class="nf">bootstrap</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Niter</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">statistic</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">size</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">Niter</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">object</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">Niter</span><span class="p">)):</span>
+        <span class="n">curdata</span> <span class="o">=</span> <span class="n">sample_with_replacement</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">size</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">statistic</span><span class="p">(</span><span class="n">curdata</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+        
+
+<div class="viewcode-block" id="bootstrap_regression"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.bootstrapping.bootstrap_regression">[docs]</a><span class="k">def</span> <span class="nf">bootstrap_regression</span><span class="p">(</span><span class="n">xdata</span><span class="p">,</span> <span class="n">ydata</span><span class="p">,</span> <span class="n">Nbootstrap</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">Nresargs</span> <span class="o">=</span> <span class="mi">2</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Performs multiple linear regressions on the data given in datax and datay</span>
+<span class="sd">    Nbootstrap : number of distributions to be re drawn</span>
+<span class="sd">    Nresargs :  number of result arguments from the linregress function to be returned, defaults to 2 (slope, intercept)</span>
+<span class="sd">    </span>
+<span class="sd">    returns a 2d array, with each row </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="n">statfun</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">linregress</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">,:],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">,:])[:</span><span class="n">Nresargs</span><span class="p">]</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">bootstrap</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">xdata</span><span class="p">,</span> <span class="n">ydata</span><span class="p">)),</span> <span class="n">statistic</span> <span class="o">=</span> <span class="n">statfun</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> 
+                        <span class="n">Niter</span> <span class="o">=</span> <span class="n">Nbootstrap</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">Nbootstrap</span><span class="p">,</span> <span class="n">Nresargs</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">Nbootstrap</span><span class="p">)):</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">float</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+    
+</div>
+<div class="viewcode-block" id="bootstrap_cl_regression"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.bootstrapping.bootstrap_cl_regression">[docs]</a><span class="k">def</span> <span class="nf">bootstrap_cl_regression</span><span class="p">(</span><span class="n">xdata</span><span class="p">,</span> <span class="n">ydata</span><span class="p">,</span> <span class="n">Nbootstrap</span> <span class="o">=</span> <span class="mf">1000.</span><span class="p">,</span>
+                            <span class="n">slope_extent</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Performs multiple circular linear regressions on the data given in datax and datay</span>
+<span class="sd">    xdata is the linear data</span>
+<span class="sd">    ydata is the circular data</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">statfun</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">circular_linear_regression</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">,:],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">,:],</span> <span class="n">slope_extent</span> <span class="o">=</span> <span class="n">slope_extent</span><span class="p">)</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="n">bootstrap</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">xdata</span><span class="p">,</span> <span class="n">ydata</span><span class="p">)),</span> <span class="n">statistic</span> <span class="o">=</span> <span class="n">statfun</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> 
+                        <span class="n">Niter</span> <span class="o">=</span> <span class="n">Nbootstrap</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">Nbootstrap</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">Nbootstrap</span><span class="p">)):</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        
+    <span class="k">return</span> <span class="n">out</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user/index.html">User Guide</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             >index</a>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer">
+        &copy; Copyright 2013, Victor Benichoux.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pynaural.signal.misc &mdash; Pynaural 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pynaural 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <div class="headertitle"><a
+          href="../../../index.html">Pynaural 0.1 documentation</a></div>
+        <div class="rel">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pynaural.signal.misc</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">numpy.fft</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="kn">as</span> <span class="nn">sp</span>
+
+<span class="kn">from</span> <span class="nn">pynaural.signal.sounds</span> <span class="kn">import</span> <span class="n">Sound</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;my_logspace&#39;</span><span class="p">,</span> <span class="s">&#39;rms&#39;</span><span class="p">,</span>
+           <span class="s">&#39;fftconvolve&#39;</span><span class="p">,</span> <span class="s">&#39;fftxcorr&#39;</span><span class="p">,</span>
+           <span class="s">&#39;ola_filter&#39;</span><span class="p">,</span> <span class="s">&#39;zeropad&#39;</span><span class="p">,</span>
+           <span class="s">&#39;nextpow2&#39;</span>
+           <span class="p">]</span>
+
+<div class="viewcode-block" id="my_logspace"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.misc.my_logspace">[docs]</a><span class="k">def</span> <span class="nf">my_logspace</span><span class="p">(</span><span class="n">fdown</span><span class="p">,</span> <span class="n">fup</span><span class="p">,</span> <span class="n">nfreqs</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns nfreqs logarithmically distributed frequencies between fdown and fup</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">upvalue</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">fup</span><span class="p">)</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">fdown</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">upvalue</span><span class="p">,</span> <span class="n">num</span> <span class="o">=</span> <span class="n">nfreqs</span><span class="p">,</span> <span class="n">endpoint</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">base</span> <span class="o">=</span> <span class="n">fdown</span><span class="p">)</span>
+
+<span class="c">## FFT-based convolution and cross correlation</span>
+</div>
+<div class="viewcode-block" id="fftconvolve"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.misc.fftconvolve">[docs]</a><span class="k">def</span> <span class="nf">fftconvolve</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Uses FFT to convolve two 1D signals together</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">Nx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">Nh</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+    <span class="n">Ntot</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">Nx</span><span class="o">+</span><span class="n">Nh</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">zeropad</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Ntot</span><span class="p">)</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">zeropad</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">Ntot</span><span class="p">)</span>
+    <span class="n">xft</span> <span class="o">=</span> <span class="n">fft</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">hft</span> <span class="o">=</span> <span class="n">fft</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ifft</span><span class="p">(</span><span class="n">xft</span><span class="o">*</span><span class="n">hft</span><span class="p">)[:</span><span class="n">Nx</span><span class="o">+</span><span class="n">Nh</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">real</span>
+</div>
+<div class="viewcode-block" id="fftxcorr"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.misc.fftxcorr">[docs]</a><span class="k">def</span> <span class="nf">fftxcorr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Uses FFT to do a cross correlation.</span>
+<span class="sd">    It is equivalent to the function correlate from sp except it uses FFTs (so it&#39;s faster).</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">Nx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">Nh</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+    <span class="n">Ntot</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">Nx</span><span class="o">+</span><span class="n">Nh</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">zeropad</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Ntot</span><span class="p">)</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">zeropad</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">Ntot</span><span class="p">)</span>
+    <span class="n">xft</span> <span class="o">=</span> <span class="n">fft</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">hft</span> <span class="o">=</span> <span class="n">fft</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">fftshift</span><span class="p">(</span><span class="n">ifft</span><span class="p">(</span><span class="n">xft</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">hft</span><span class="p">)))</span>
+    <span class="n">mid</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+
+
+    <span class="k">return</span> <span class="n">res</span><span class="p">[</span><span class="n">mid</span> <span class="o">-</span> <span class="nb">max</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">Nh</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span><span class="n">mid</span> <span class="o">+</span> <span class="nb">max</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">Nh</span><span class="p">)]</span><span class="o">.</span><span class="n">real</span>
+
+<span class="c">## Overlap-and-add filtering</span>
+</div>
+<div class="viewcode-block" id="ola_filter"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.misc.ola_filter">[docs]</a><span class="k">def</span> <span class="nf">ola_filter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Overlap add method for linear convolution.</span>
+<span class="sd">    Usually x must be longer than h (or the same length).</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">h</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;x should be bigger of equal than ir&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">h</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;should have the same shape&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Not supported for now&#39;</span><span class="p">)</span>
+
+    <span class="n">L</span> <span class="o">=</span> <span class="n">nextpow2</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">h</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">L</span><span class="p">))):</span>
+        <span class="n">down</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">L</span><span class="p">)</span>
+        <span class="n">up</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">min</span><span class="p">((</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">L</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">chunk</span> <span class="o">=</span> <span class="n">fftconvolve</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">down</span><span class="p">:</span><span class="n">up</span><span class="p">],</span> <span class="n">h</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="n">down</span><span class="p">:</span><span class="n">up</span><span class="o">+</span><span class="n">h</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">chunk</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+<span class="c">## Decibels</span>
+</div>
+<span class="k">def</span> <span class="nf">dBconv</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns the dB value of the array (i.e. 20*log10(x))</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="mi">20</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">dB_SPL</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns the dB SPL value of the array, assuming it is in Pascals</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="mf">20.0</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">rms</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">/</span><span class="mf">2e-5</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="rms"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.misc.rms">[docs]</a><span class="k">def</span> <span class="nf">rms</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns the RMS value of the array given as argument</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="n">axis</span><span class="p">))</span>
+<span class="c"># old but bad</span>
+<span class="c">#    return np.sqrt(np.mean((np.asarray(x)-np.mean(np.asarray(x), axis = axis))**2, axis = axis))</span>
+
+
+
+<span class="c">## padding utils functions for FFT</span>
+</div>
+<div class="viewcode-block" id="zeropad"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.misc.zeropad">[docs]</a><span class="k">def</span> <span class="nf">zeropad</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Zero pads the given array so that it ends up with the given length</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">x</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))))</span>
+</div>
+<div class="viewcode-block" id="nextpow2"><a class="viewcode-back" href="../../../user/signal.html#pynaural.signal.misc.nextpow2">[docs]</a><span class="k">def</span> <span class="nf">nextpow2</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns the next pwer of 2 after n</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="mi">2</span><span class="o">**</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+
+<span class="c">## Band pas noise generation</span>
+</div>
+<span class="k">def</span> <span class="nf">bandpass_noise</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">fc</span><span class="p">,</span>
+                   <span class="n">fraction</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">stopband_fraction</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
+                   <span class="n">samplerate</span> <span class="o">=</span> <span class="mf">44100.</span><span class="p">,</span>
+                   <span class="n">gstop</span> <span class="o">=</span> <span class="mf">10.</span><span class="p">,</span> <span class="n">gpass</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns a Sound which is a bp filtered version of white noise with fc and fraction filter, using butterworth filters.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># TODO: move to Sound.bandpass_noise</span>
+    <span class="n">noise</span> <span class="o">=</span> <span class="n">whitenoise</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="n">samplerate</span> <span class="o">=</span> <span class="n">samplerate</span><span class="p">)</span>
+
+    <span class="n">fhigh</span><span class="p">,</span> <span class="n">flow</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="p">((</span><span class="n">fraction</span><span class="o">/</span><span class="mf">2.</span><span class="p">))</span><span class="o">*</span><span class="n">fc</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="o">**</span><span class="p">((</span><span class="n">fraction</span><span class="o">/</span><span class="mf">2.</span><span class="p">))</span><span class="o">*</span><span class="n">fc</span>
+    <span class="n">fhigh_stop</span><span class="p">,</span> <span class="n">flow_stop</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="p">(((</span><span class="n">fraction</span><span class="o">+</span><span class="n">stopband_fraction</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">))</span><span class="o">*</span><span class="n">fc</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="o">**</span><span class="p">(((</span><span class="n">fraction</span><span class="o">+</span><span class="n">stopband_fraction</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">))</span><span class="o">*</span><span class="n">fc</span>
+
+    <span class="n">fnyquist</span> <span class="o">=</span> <span class="n">noise</span><span class="o">.</span><span class="n">samplerate</span><span class="o">/</span><span class="mf">2.</span>
+
+    <span class="n">N</span><span class="p">,</span> <span class="n">wn</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">buttord</span><span class="p">(</span><span class="n">ws</span> <span class="o">=</span> <span class="p">[</span><span class="n">flow</span><span class="o">/</span><span class="n">fnyquist</span><span class="p">,</span><span class="n">fhigh</span><span class="o">/</span><span class="n">fnyquist</span><span class="p">],</span>
+                              <span class="n">wp</span> <span class="o">=</span> <span class="p">[</span><span class="n">flow_stop</span><span class="o">/</span><span class="n">fnyquist</span><span class="p">,</span><span class="n">fhigh_stop</span><span class="o">/</span><span class="n">fnyquist</span><span class="p">],</span>
+                              <span class="n">gpass</span><span class="o">=</span><span class="n">gpass</span><span class="p">,</span>
+                              <span class="n">gstop</span><span class="o">=</span><span class="n">gstop</span><span class="p">)</span>
+
+    <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">wn</span><span class="p">,</span> <span class="n">btype</span> <span class="o">=</span> <span class="s">&#39;bandpass&#39;</span><span class="p">)</span>
+    <span class="n">sf</span> <span class="o">=</span> <span class="n">Sound</span><span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">lfilter</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">noise</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+               <span class="n">samplerate</span> <span class="o">=</span> <span class="n">noise</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sf</span>
+
+<span class="c"># gammatone filtering + cross correlation</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user/index.html">User Guide</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             >index</a>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer">
+        &copy; Copyright 2013, Victor Benichoux.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>
