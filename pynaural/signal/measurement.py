@@ -31,7 +31,7 @@ def swept_sine(fmin, fmax, samplerate, N):
     '''
     w1 = np.pi*2*fmin
     w2 = np.pi*2*fmax
-    duration = 2**N/samplerate;
+    duration = 2**N/samplerate
     K = duration*w1*np.log(w2/w1)
 
     L = duration/np.log(w2/w1)
