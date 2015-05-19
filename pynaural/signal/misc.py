@@ -1,6 +1,7 @@
 from numpy.fft import *
 from scipy.signal import *
 import scipy as sp
+import numpy as np
 
 from pynaural.signal.sounds import Sound
 
@@ -34,25 +35,28 @@ def fftconvolve(x, h):
     hft = fft(h)
     return ifft(xft*hft)[:Nx+Nh-1].real
 
-def fftxcorr(x, h):
+def fftxcorr(x, h, axis = 0, normalized = True):
     '''
     Uses FFT to do a cross correlation.
     It is equivalent to the function correlate from sp except it uses FFTs (so it's faster).
     '''
-    x = x.flatten()
-    h = h.flatten()
-    Nx = len(x)
-    Nh = len(h)
+    Nx = x.shape[axis]
+    Nh = h.shape[axis]
     Ntot = 2**np.ceil(np.log2(Nx+Nh-1))
-    x = zeropad(x, Ntot)
-    h = zeropad(h, Ntot)
-    xft = fft(x)
-    hft = fft(h)
-    res = fftshift(ifft(xft*np.conj(hft)))
+    x = zeropad(x, Ntot, axis = axis)
+    h = zeropad(h, Ntot, axis = axis)
+    xft = fft(x, axis = axis)
+    hft = fft(h, axis = axis)
+    res = fftshift(ifft(xft*np.conj(hft), axis = axis), axes = axis)
     mid = len(res)/2
 
+    norm_factor = rms(x, axis = axis) * rms(h, axis = axis)
+    res /= norm_factor * res.shape[axis]
 
-    return res[mid - max(Nx, Nh) + 1:mid + max(Nx, Nh)].real
+    if axis == 0:
+        return res[mid - max(Nx, Nh) + 1:mid + max(Nx, Nh),:].real
+    else:
+        return res[:,mid - max(Nx, Nh) + 1:mid + max(Nx, Nh)].real
 
 ## Overlap-and-add filtering
 
@@ -105,11 +109,17 @@ def rms(x, axis = 0):
 
 ## padding utils functions for FFT
 
-def zeropad(x, n):
+def zeropad(x, n, axis = 0):
     '''
     Zero pads the given array so that it ends up with the given length
     '''
-    return np.hstack((x,np.zeros(n-len(x))))
+    if len(x.shape) == 1:
+        return np.hstack((x,np.zeros(n-len(x))))
+    else:
+        if axis == 0:
+            return np.vstack((x, np.zeros((n-x.shape[0], x.shape[1]))))
+        else:
+            return np.hstack((x, np.zeros((x.shape[0], n-x.shape[1]))))
 
 def nextpow2(n):
     '''

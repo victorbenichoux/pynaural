@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.fft import fft, fftfreq, ifft
-
 from pynaural.utils.debugtools import log_debug
 from pynaural.signal.sounds import Sound
 from pynaural.signal.impulseresponse import ImpulseResponse
@@ -79,8 +78,19 @@ def itdp_itdg_idi(ipds, cfs, samplerate,
                 guess = False
             itdg[k], idi[k] = fit.circular_linear_regression(curfreqs, 
                                                              curipds, 
-                                                             slopeguess = guess)
+                                                             slopeguess = guess,
+                                                             slope_extent = itdg_extent)
     itdp = itdg + idi/cfs
+    return itdp, itdg, idi
+
+def itdp_itdg_idi_unwrap(ipds, freqs):
+    tmp = ipds
+    tmp[0] = 0.
+    u_tmp = np.unwrap(ipds)
+    itdp, itdg, idi = np.zeros(len(freqs)), np.zeros(len(freqs)), np.zeros(len(freqs))
+    itdp = u_tmp/freqs
+    itdg = np.gradient(u_tmp, freqs[1]-freqs[0])
+    idi = (itdp-itdg)/freqs
     return itdp, itdg, idi
 
 ######## XCORR ITD
@@ -296,3 +306,4 @@ def ipd(hrir, unwrap = False, threshold = np.pi, positivefreqs = False):
     if unwrap:
         ipds = np.unwrap(ipds, axis = 0, discont = threshold)
     return ipds
+

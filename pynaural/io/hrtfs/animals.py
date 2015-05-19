@@ -7,6 +7,9 @@ import numpy as np
 import os, inspect
 from brian import *
 from pynaural.signal.impulseresponse import ImpulseResponse
+
+__all__ = ['load_Tollin_cat']
+
 _, name, _, _, _ = os.uname()
 
 BOfolder = ''
@@ -35,6 +38,8 @@ elif name == 'Victor-Benichouxs-iMac.local':
     print 'Sur le mac maison'
     TCfolder = '/Users/victorbenichoux/Workspace/hrtf_analysis/new/Cat (from Daniel Tollin)/Raw HRTFs/'
     CATFOLDER = '/Users/victorbenichoux/Workspace/Data/HRTF/synthcat/'
+elif name == 'victor-Inspiron-660':
+    TCfolder = '/home/victor/Data/HRTF/Cat (from Daniel Tollin)/Raw HRTFs/'
 else:
     CATFOLDER = '/Users/victorbenichoux/data/HRTF/Synthesized cat/'
     print "Unrecognized computer %s" % name

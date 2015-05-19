@@ -31,7 +31,6 @@ def broadband_coherence(hrir, samplerate, tcut = 1e-3):
 
     return np.max(xcorr[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
 
-
 def octaveband_coherence(hrir, samplerate, cfs, tcut = 1e-3, butter_order = 3, fraction = 1./3, return_envelope = False):
     '''
     Coherence computed in fraction-of-octave bands of frequency.
@@ -74,7 +73,7 @@ def octaveband_coherence(hrir, samplerate, cfs, tcut = 1e-3, butter_order = 3, f
         return res
 
 
-def gammatone_coherence(hrir, samplerate, cf, tcut = 1e-3):
+def gammatone_coherence(hrir, samplerate, cf, tcut = 1e-3, return_envelope = False):
     '''
     returns the coherence of hrir per band in gammatone filters
     '''
@@ -84,10 +83,23 @@ def gammatone_coherence(hrir, samplerate, cf, tcut = 1e-3):
     fb = Gammatone(Repeat(hrir, len(cf)), np.hstack((cf, cf)))
     filtered_hrirset = fb.process()
     res = np.zeros(len(cf))
+
+    if return_envelope:
+        res_env = np.zeros(len(cf))
+
     for i in range(len(cf)):
         left = filtered_hrirset[:, i]
         right = filtered_hrirset[:, i+len(cf)]
         times = (np.arange(len(left)+len(right)-1)+1-len(left))/hrir.samplerate
         xcorr = fftxcorr(left, right)
         res[i] = np.max(xcorr[np.abs(times) < tcut])/(rms(left)*rms(right)*len(right))
-    return res
+        if return_envelope:
+            left_env = np.abs(sp.signal.hilbert(left))
+            right_env = np.abs(sp.signal.hilbert(right))
+            xcorr_env = fftxcorr(left_env, right_env)
+            res_env[i] = np.max(xcorr_env[np.abs(times) < tcut])/(rms(left_env)*rms(right_env)*len(right_env))
+
+    if return_envelope:
+        return res, res_env
+    else:
+        return res

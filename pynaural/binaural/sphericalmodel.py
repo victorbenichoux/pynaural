@@ -109,6 +109,7 @@ class SphericalHead(object):
         '''
         el = kwdargs.pop('elev', 0)
         nfft = kwdargs.get('nfft', self.nfft)
+        pre_delay = kwdargs.get('pre_delay', self.nfft/2)
 
         data = np.zeros((nfft, len(azs)*2), dtype = complex)
         coords = np.zeros(len(azs), dtype = [('azim','f8'), ('elev','f8')])
@@ -118,6 +119,7 @@ class SphericalHead(object):
             kwdargs['ear'] = 'right'
             data[:,kaz+len(azs)] = self._get_single_tf(az, el, **kwdargs).flatten()
 
+        data *= np.exp(1j*fftfreq(nfft)*pre_delay).reshape((nfft, 1))
         coords['azim'] = azs
         coords['elev'] = np.ones(len(azs)) * el
 
@@ -126,6 +128,13 @@ class SphericalHead(object):
                               binaural = True,
                               coordinates = coords)
         return tf
+
+    def get_itds(self, incidences, **kwdargs):
+        hrtfs = self.get_hrtfs(incidences, **kwdargs)
+        itf_angle = np.angle(hrtfs.right/hrtfs.left)
+        itf_angle[0,:] = 0
+        itds = np.unwrap(itf_angle, axis = 0)/(2*np.pi*hrtfs.freqs.reshape(self.nfft,1))
+        return itds
 
     def get_hrir(self, az, el, **kwdargs):
         '''
@@ -142,10 +151,10 @@ class SphericalHead(object):
         '''
         h = self.get_hrtf(az, el, **kwdargs)
 
-        pre_delay = kwdargs.get('pre_delay', 64)
+        #pre_delay = kwdargs.pop('pre_delay', 128)
 
         ir = ifft(np.asarray(h), axis = 0).real
-        ir = np.roll(ir, pre_delay, axis = 0)
+        #ir = np.roll(ir, pre_delay, axis = 0)
         
         irp = np.vstack((np.zeros((1,2)), ir[:-1,:]))
         irm = np.vstack((ir[1:,:], np.zeros((1,2))))
@@ -156,7 +165,7 @@ class SphericalHead(object):
         
     def _get_single_tf(self, az, el, distance = 2.,
                        ear = 'left', 
-                       pre_delay = None,
+                       pre_delay = 128,
                        nfft = None, samplerate = None, threshold = 1e-15):
         ## This is where the computation is actually carried out
         # KWDARG parsing
@@ -219,7 +228,7 @@ class SphericalHead(object):
             oldratio = newratio
             newratio = abs(term)/abs(sum)
             condition = (oldratio > threshold) + (newratio > threshold)
-        H = (rho * np.exp(- 1j * mu) * sum) / (1j * mu)
+        H = (rho * np.exp(- 1j * (mu + 2*np.pi*f*float(pre_delay)/samplerate)) * sum) / (1j * mu)
 
         H[np.isnan(H)] = 0
         

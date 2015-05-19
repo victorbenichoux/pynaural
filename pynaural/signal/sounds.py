@@ -142,7 +142,6 @@ class Sound(np.ndarray):
         The number of channels in the sound.
         :return:
         '''
-        print self.shape
         return self.shape[1]
 
     def __new__(cls, data, samplerate=None, duration=None):

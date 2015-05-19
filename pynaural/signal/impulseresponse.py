@@ -291,14 +291,17 @@ class ImpulseResponse(np.ndarray):
                     idx.append(i)
             if len(idx) > 0:
                 idx = np.array(idx)
-                data = np.hstack((self[:, idx], self[:, idx + self.shape[1] /2]))
-
-            
                 kwdargs = self.get_kwdargs(_slice = idx)
-                kwdargs['binaural'] = True
+                # data collection
+                if self.binaural:
+                    data = np.hstack((self[:, idx], self[:, idx + self.shape[1] /2]))
+                    kwdargs['binaural'] = True
+                else:
+                    data = self[:, idx]
+                    kwdargs['binaural'] = False
                 return ImpulseResponse(data, **kwdargs)
             else:
-                log_debug('No HRTF found matching condition')
+                log_debug('No IR found matching condition')
                 return None
             
         if len(args) == 2:
@@ -966,12 +969,7 @@ class TransferFunction(np.ndarray):
 
     def forcoordinates(self, *args):
         '''
-        Should return an impulseResponse containing all the rays headed towards source args
-        SPEC:
-        value peut etre un int -> indexation
-        value peut etre une rotation?
-        value peut etre un tuple (len=2) az, el
-        value peut etre une condition: mieux!
+        Should return a TF containing all the rays headed towards source args
         '''
         # argument parsing
         if len(args) == 1 and isinstance(args[0], int):
@@ -982,7 +980,7 @@ class TransferFunction(np.ndarray):
         
             # data collection
             if self.binaural:
-                data = np.zeros((self.shape[0], 2))
+                data = np.zeros((self.shape[0], 2), dtype = complex)
                 data[:, 0] = self.left[:, i].flatten()
                 data[:, 1] = self.right[:, i].flatten()
                 kwdargs['binaural'] = True
