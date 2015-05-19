@@ -1,7 +1,7 @@
-Raytracer
+Binaural
 =========
 
-This documentation deals with the basic raytracing functions.
+This documentation deals with the binaural cues and models.
 
 
 .. automodule:: pynaural.binaural.binauralcues
@@ -12,4 +12,3 @@ This documentation deals with the basic raytracing functions.
 
 .. automodule:: pynaural.binaural.sphericalmodel
    :members:
-  
